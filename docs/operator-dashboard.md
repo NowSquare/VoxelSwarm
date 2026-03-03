@@ -14,16 +14,16 @@ The main dashboard shows:
 
 - **Summary cards:** Total instances, Active, Paused, Storage used
 - **Recent activity:** Last 10 provisioning events
-- **Quick action:** "New Demo Instance" button
+- **Quick action:** "New Instance" button
 
 ## Instance Management
 
 ### Instance List (`/operator/instances`)
 
 Filterable table showing all instances:
-- Slug, name, email, status badge, type badge, created date, last active
-- **Filters:** Status (all/active/paused/failed), Type (tenant/demo/gallery), Search by name or email
-- **Per-row actions:** Visit instance, Visit Studio, Pause/Resume, Delete
+- Identifier, name, email, status badge, type badge, created date
+- **Filters:** Status (all/active/paused/provisioning/failed), Search by name or email
+- **Per-row actions:** Click row to view detail page
 
 ### Instance Detail (`/operator/instances/{id}`)
 
@@ -42,11 +42,15 @@ Filterable table showing all instances:
 | `paused` | Temporarily disabled (shows holding page) |
 | `failed` | Provisioning failed (see logs) |
 
-### Creating Demo Instances
+### Creating Instances
 
-From the dashboard: "New Demo Instance" → enter a name → Swarm provisions immediately with `type: demo`.
+From the dashboard or instances page: "New Instance" → enter an identifier (subdomain or folder name depending on configured adapter), optional name and email → Swarm provisions immediately.
 
-To promote a demo to the public gallery: open instance detail → "Mark as Gallery Demo".
+The modal adapts to the configured adapter:
+- **Domain adapters** (Nginx, Forge, cPanel, Plesk): Shows a subdomain input with `.basedomain.com` suffix and live preview
+- **Filesystem adapter**: Shows the instances root path prefix with a folder name input
+
+To promote an instance to the public gallery: open instance detail → "Mark as Gallery Demo".
 
 ## Template Management (`/operator/templates`)
 
@@ -76,7 +80,7 @@ Upload ZIPs to the server via FTP/SSH, then process them from this page.
 
 | Section | What you configure |
 |---------|-------------------|
-| **General** | Base domain, max instances, signups toggle, gallery toggle, operator email |
+| **General** | Base domain, max instances, public site toggle, signups toggle, gallery toggle, operator email |
 | **Control Panel** | Adapter selection + adapter-specific config + "Test Connection" button |
 | **Email** | SMTP settings with presets (Gmail, Outlook, Mailpit, Custom) + "Send Test" button |
 | **Account** | Password change |

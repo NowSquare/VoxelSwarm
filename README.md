@@ -51,9 +51,9 @@ This extracts VoxelSite, moves the image library to a shared location (saving ~1
 
 > CLI alternative: `php scripts/prepare-template.php /path/to/voxelsite.zip`
 
-### 4. Instances go live
+### 4. Provision instances
 
-Users sign up, get their own hosting account (starts with a subdomain, custom domains can be linked), and start building with AI. You monitor everything from the operator dashboard at `/operator`.
+By default, VoxelSwarm runs in **operator-only mode** — `GET /` redirects to the operator login. You provision instances from the dashboard at `/operator`. When you're ready for public self-service signups, enable the public site in Settings.
 
 ---
 
@@ -74,7 +74,7 @@ VoxelSwarm uses an adapter system to create hosting accounts and configure your 
 
 | Adapter | Status | Configuration |
 |---------|--------|---------------|
-| **Local** (Herd/Valet) | ✅ Working | [docs/adapters/local.md](docs/adapters/local.md) |
+| **Filesystem** (Local) | ✅ Working | [docs/adapters/local.md](docs/adapters/local.md) |
 | **Nginx** | ✅ Working | [docs/adapters/nginx.md](docs/adapters/nginx.md) |
 | **Laravel Forge** | 🧪 Testing | [docs/adapters/forge.md](docs/adapters/forge.md) |
 | **cPanel/WHM** | 🧪 Testing | [docs/adapters/cpanel.md](docs/adapters/cpanel.md) |
