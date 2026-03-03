@@ -88,6 +88,28 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
   <!-- Global Toast Container -->
   <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
+  <!-- Generic Confirmation Modal -->
+  <div id="sw-confirm-overlay" class="fixed inset-0 z-[60] hidden items-center justify-center p-4 bg-zinc-950/50 backdrop-blur-sm" style="transition: opacity 0.15s ease;">
+    <div id="sw-confirm-card" class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl rounded-2xl w-full max-w-sm overflow-hidden dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transform transition-all duration-150 scale-95 opacity-0">
+      <div class="px-6 pt-6 pb-2">
+        <div class="flex items-start gap-4">
+          <!-- Icon -->
+          <div id="sw-confirm-icon" class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
+            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="min-w-0">
+            <h3 id="sw-confirm-title" class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Are you sure?</h3>
+            <p id="sw-confirm-message" class="text-sm text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed">This action cannot be undone.</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 pb-6 pt-4 flex gap-3">
+        <button id="sw-confirm-cancel" type="button" class="flex-1 sw-btn-secondary">Cancel</button>
+        <button id="sw-confirm-ok" type="button" class="flex-1 sw-btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     function showToast(message, type = 'success') {
       const container = document.getElementById('toast-container');
@@ -147,6 +169,83 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
       }
     }
     updateThemeUI(document.documentElement.getAttribute('data-theme') || 'dark');
+
+    /**
+     * swConfirm — Generic confirmation modal.
+     *
+     * Returns a Promise: resolves on confirm, rejects on cancel.
+     *
+     * Usage:
+     *   swConfirm({ title: 'Delete version?', message: 'This removes all files.', confirmLabel: 'Delete', danger: true })
+     *     .then(() => form.submit())
+     *     .catch(() => {});
+     *
+     * Or with async/await:
+     *   if (await swConfirm({ title: 'Delete?', message: '...' }).catch(() => false)) { ... }
+     */
+    function swConfirm({ title = 'Are you sure?', message = 'This action cannot be undone.', confirmLabel = 'Confirm', danger = true } = {}) {
+      return new Promise((resolve, reject) => {
+        const overlay = document.getElementById('sw-confirm-overlay');
+        const card    = document.getElementById('sw-confirm-card');
+        const titleEl = document.getElementById('sw-confirm-title');
+        const msgEl   = document.getElementById('sw-confirm-message');
+        const okBtn   = document.getElementById('sw-confirm-ok');
+        const cancelBtn = document.getElementById('sw-confirm-cancel');
+        const iconEl  = document.getElementById('sw-confirm-icon');
+
+        // Populate
+        titleEl.textContent = title;
+        msgEl.textContent   = message;
+        okBtn.textContent   = confirmLabel;
+
+        // Style the confirm button + icon
+        if (danger) {
+          okBtn.className = 'flex-1 sw-btn-danger';
+          iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400';
+          iconEl.innerHTML = '<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+        } else {
+          okBtn.className = 'flex-1 sw-btn-primary';
+          iconEl.className = 'w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400';
+          iconEl.innerHTML = '<svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+        }
+
+        // Show
+        overlay.classList.remove('hidden');
+        overlay.classList.add('flex');
+        requestAnimationFrame(() => {
+          card.classList.remove('scale-95', 'opacity-0');
+          card.classList.add('scale-100', 'opacity-100');
+        });
+        okBtn.focus();
+
+        // Cleanup helper
+        function close() {
+          card.classList.remove('scale-100', 'opacity-100');
+          card.classList.add('scale-95', 'opacity-0');
+          setTimeout(() => {
+            overlay.classList.remove('flex');
+            overlay.classList.add('hidden');
+          }, 150);
+          okBtn.removeEventListener('click', onConfirm);
+          cancelBtn.removeEventListener('click', onCancel);
+          overlay.removeEventListener('click', onOverlay);
+          document.removeEventListener('keydown', onKey);
+        }
+
+        function onConfirm() { close(); resolve(true); }
+        function onCancel()  { close(); reject(); }
+        function onOverlay(e) { if (e.target === overlay) onCancel(); }
+        function onKey(e) {
+          if (e.key === 'Escape') onCancel();
+          if (e.key === 'Enter') onConfirm();
+        }
+
+        okBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        overlay.addEventListener('click', onOverlay);
+        document.addEventListener('keydown', onKey);
+      });
+    }
   </script>
 </body>
 </html>

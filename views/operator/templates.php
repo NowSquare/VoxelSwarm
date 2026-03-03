@@ -71,11 +71,10 @@ $pageTitle = 'Templates — VoxelSwarm';
                 <input type="hidden" name="version" value="<?= htmlspecialchars($v['directory']) ?>">
                 <button type="submit" class="sw-btn-secondary px-3 py-1.5 text-xs">Activate</button>
               </form>
-              <form method="POST" action="/operator/templates/delete-version" class="inline"
-                    onsubmit="return confirm('Delete version <?= htmlspecialchars($v['directory']) ?>? This cannot be undone.')">
+              <form method="POST" action="/operator/templates/delete-version" class="inline" id="delete-version-<?= htmlspecialchars($v['directory']) ?>">
                 <?= $csrfField ?>
                 <input type="hidden" name="version" value="<?= htmlspecialchars($v['directory']) ?>">
-                <button type="submit" class="sw-btn-danger px-3 py-1.5 text-xs">Delete</button>
+                <button type="button" class="sw-btn-danger px-3 py-1.5 text-xs" onclick="swConfirm({ title: 'Delete version?', message: 'Version <?= htmlspecialchars($v['directory']) ?> will be permanently removed. This cannot be undone.', confirmLabel: 'Delete Version', danger: true }).then(() => this.closest('form').submit()).catch(() => {})">Delete</button>
               </form>
             <?php else: ?>
               <span class="text-xs text-zinc-400 dark:text-zinc-500 italic">In use</span>
@@ -123,11 +122,10 @@ $pageTitle = 'Templates — VoxelSwarm';
               <input type="hidden" name="filename" value="<?= htmlspecialchars($zip['filename']) ?>">
               <button type="submit" class="sw-btn-primary px-3 py-1.5 text-xs">Process</button>
             </form>
-            <form method="POST" action="/operator/templates/delete-zip" class="inline"
-                  onsubmit="return confirm('Delete <?= htmlspecialchars($zip['filename']) ?>? This cannot be undone.')">
+            <form method="POST" action="/operator/templates/delete-zip" class="inline">
               <?= $csrfField ?>
               <input type="hidden" name="filename" value="<?= htmlspecialchars($zip['filename']) ?>">
-              <button type="submit" class="sw-btn-danger px-3 py-1.5 text-xs">Delete</button>
+              <button type="button" class="sw-btn-danger px-3 py-1.5 text-xs" onclick="swConfirm({ title: 'Delete ZIP file?', message: '<?= htmlspecialchars($zip['filename']) ?> will be permanently removed. This cannot be undone.', confirmLabel: 'Delete ZIP', danger: true }).then(() => this.closest('form').submit()).catch(() => {})">Delete</button>
             </form>
           </div>
         </div>

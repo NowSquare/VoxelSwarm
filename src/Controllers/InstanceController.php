@@ -6,7 +6,6 @@ namespace Swarm\Controllers;
 
 use Swarm\Database;
 use Swarm\Helpers\Response;
-use Swarm\Helpers\Validator;
 use Swarm\Middleware\Csrf;
 use Swarm\Models\Instance;
 use Swarm\Models\Setting;
@@ -33,36 +32,59 @@ class InstanceController
         $instances = Instance::list($filters);
 
         Response::view('operator/instances', [
-            'instances'  => $instances,
-            'filters'    => $filters,
-            'csrfField'  => Csrf::field(),
+            'instances'     => $instances,
+            'filters'       => $filters,
+            'csrfField'     => Csrf::field(),
+            'adapter'       => Setting::get('control_panel_adapter', 'local'),
+            'baseDomain'    => Setting::get('base_domain', 'localhost'),
+            'instancesPath' => Setting::get('instances_path', SWARM_STORAGE . '/instances'),
+            'operatorEmail' => Setting::get('operator_email', ''),
         ], 'operator');
     }
 
     /**
-     * POST /operator/instances — Create a new demo instance.
+     * POST /operator/instances — Create a new instance.
      */
     public function store(): void
     {
         Csrf::validate();
 
-        $errors = Validator::validate($_POST, [
-            'name' => 'required|string|min:2|max:80',
-        ]);
+        // Slug can be provided directly, or generated from name
+        $slug  = !empty($_POST['slug']) ? trim($_POST['slug']) : '';
+        $name  = !empty($_POST['name']) ? trim($_POST['name']) : '';
+        $email = !empty($_POST['email']) ? trim($_POST['email']) : Setting::get('operator_email', 'operator@localhost');
 
-        if (!empty($errors)) {
-            Response::json(['error' => reset($errors)], 422);
+        // Require at least a slug or name
+        if (empty($slug) && empty($name)) {
+            Response::json(['error' => 'Provide an identifier or name for the instance.'], 422);
         }
 
-        $name  = trim($_POST['name']);
-        $slug  = SubdomainGenerator::generate($name);
+        // Generate slug from name if not provided
+        if (empty($slug)) {
+            $slug = SubdomainGenerator::generate($name);
+        } else {
+            // Sanitize manually-entered slug
+            $slug = preg_replace('/[^a-z0-9-]/', '', strtolower($slug));
+            $slug = preg_replace('/-+/', '-', trim($slug, '-'));
+            if (empty($slug)) {
+                Response::json(['error' => 'Invalid identifier. Use only lowercase letters, numbers, and hyphens.'], 422);
+            }
+            if (Instance::slugExists($slug)) {
+                Response::json(['error' => 'This identifier is already in use.'], 422);
+            }
+        }
+
+        // Default name to slug if not provided
+        if (empty($name)) {
+            $name = $slug;
+        }
 
         $instanceId = Instance::create([
             'slug'   => $slug,
             'name'   => $name,
-            'email'  => Setting::get('operator_email', 'operator@localhost'),
+            'email'  => $email,
             'status' => 'queued',
-            'type'   => 'demo',
+            'type'   => 'instance',
         ]);
 
         // Provision in background

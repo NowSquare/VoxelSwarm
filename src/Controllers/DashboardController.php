@@ -37,9 +37,13 @@ class DashboardController
         )->fetchAll();
 
         Response::view('operator/dashboard', [
-            'counts'      => $counts,
-            'storageUsed' => $this->formatBytes($storageUsed),
-            'recentLogs'  => $recentLogs,
+            'counts'        => $counts,
+            'storageUsed'   => $this->formatBytes($storageUsed),
+            'recentLogs'    => $recentLogs,
+            'adapter'       => \Swarm\Models\Setting::get('control_panel_adapter', 'local'),
+            'baseDomain'    => \Swarm\Models\Setting::get('base_domain', 'localhost'),
+            'instancesPath' => $instancesPath,
+            'operatorEmail' => \Swarm\Models\Setting::get('operator_email', ''),
         ], 'operator');
     }
 

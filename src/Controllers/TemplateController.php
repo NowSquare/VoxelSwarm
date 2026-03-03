@@ -28,11 +28,12 @@ class TemplateController
         unset($_SESSION['flash']);
 
         Response::view('operator/templates', [
-            'zips'     => $zips,
-            'versions' => $versions,
-            'active'   => $active,
-            'flash'    => $flash,
-        ]);
+            'zips'      => $zips,
+            'versions'  => $versions,
+            'active'    => $active,
+            'flash'     => $flash,
+            'csrfField' => \Swarm\Middleware\Csrf::field(),
+        ], 'operator');
     }
 
     /**

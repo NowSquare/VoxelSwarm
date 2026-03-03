@@ -54,7 +54,7 @@ $liveUrl = "https://{$instance['subdomain']}";
         Resume
       </button>
     <?php endif; ?>
-    <button onclick="if(confirm('Delete this instance permanently? This cannot be undone.')) instanceAction('delete')" class="sw-btn-danger">
+    <button onclick="swConfirm({ title: 'Delete instance?', message: 'This permanently removes <?= htmlspecialchars($instance['name']) ?> and all its files. This cannot be undone.', confirmLabel: 'Delete Instance', danger: true }).then(() => instanceAction('delete')).catch(() => {})" class="sw-btn-danger">
       Delete
     </button>
   </div>
