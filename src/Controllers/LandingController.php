@@ -9,19 +9,27 @@ use Swarm\Models\Instance;
 use Swarm\Models\Setting;
 
 /**
- * LandingController — The SaaS homepage.
+ * LandingController — Public homepage.
  *
- * Renders the landing page with live stats from the database.
- * If signups are disabled, the CTA text changes to "Coming soon."
+ * By default, redirects to the operator login. When the operator
+ * enables the public site via Settings, renders the landing page.
  */
 class LandingController
 {
     /**
-     * GET / — Show the landing page.
+     * GET / — Redirect to operator login, or show the landing page.
      */
     public function index(): void
     {
-        $signupsEnabled = Setting::get('signups_enabled', 'true') === 'true';
+        // Public site disabled by default — redirect to operator panel
+        $publicSiteEnabled = Setting::get('public_site_enabled', 'false') === 'true';
+
+        if (!$publicSiteEnabled) {
+            Response::redirect('/operator/login');
+            return;
+        }
+
+        $signupsEnabled = Setting::get('signups_enabled', 'false') === 'true';
         $counts = Instance::countByStatus();
 
         // No layout — the landing page is a self-contained document

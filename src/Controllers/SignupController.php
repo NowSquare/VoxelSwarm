@@ -22,7 +22,13 @@ class SignupController
      */
     public function index(): void
     {
-        $signupsEnabled = Setting::get('signups_enabled', 'true') === 'true';
+        // Public site must be enabled AND signups must be enabled
+        $publicSiteEnabled = Setting::get('public_site_enabled', 'false') === 'true';
+        if (!$publicSiteEnabled) {
+            Response::redirect('/operator/login');
+            return;
+        }
+        $signupsEnabled = Setting::get('signups_enabled', 'false') === 'true';
 
         Response::view('signup', [
             'signupsEnabled' => $signupsEnabled,
@@ -40,7 +46,7 @@ class SignupController
         Csrf::validate();
 
         // Check signups enabled
-        if (Setting::get('signups_enabled', 'true') !== 'true') {
+        if (Setting::get('signups_enabled', 'false') !== 'true') {
             Response::json(['error' => 'Signups are currently disabled.'], 403);
         }
 

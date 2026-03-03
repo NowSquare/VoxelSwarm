@@ -249,8 +249,9 @@ class InstallController
 
             // ── Step 6: Defaults ──
             Setting::set('max_instances', '100');
-            Setting::set('signups_enabled', 'true');
-            Setting::set('gallery_enabled', 'true');
+            Setting::set('public_site_enabled', 'false');
+            Setting::set('signups_enabled', 'false');
+            Setting::set('gallery_enabled', 'false');
             Setting::set('version', SWARM_VERSION);
             Setting::set('installed_at', date('c'));
 

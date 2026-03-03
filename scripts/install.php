@@ -117,7 +117,7 @@ echo "\n";
 echo "Step 5: Control Panel Adapter\n";
 echo str_repeat('─', 40) . "\n";
 echo "  Available adapters:\n";
-echo "  0. local  — No-op for local development (Herd, Valet)\n";
+echo "  0. local  — Filesystem only (custom path, no subdomain management)\n";
 echo "  1. nginx  — Direct Nginx conf management\n";
 echo "  2. forge  — Laravel Forge API\n";
 echo "  3. cpanel — cPanel/WHM API\n";
@@ -179,8 +179,9 @@ echo "\n";
 
 // ── Step 7: Defaults ──
 Setting::set('max_instances', Setting::get('max_instances', '100'));
-Setting::set('signups_enabled', Setting::get('signups_enabled', 'true'));
-Setting::set('gallery_enabled', Setting::get('gallery_enabled', 'true'));
+Setting::set('public_site_enabled', Setting::get('public_site_enabled', 'false'));
+Setting::set('signups_enabled', Setting::get('signups_enabled', 'false'));
+Setting::set('gallery_enabled', Setting::get('gallery_enabled', 'false'));
 Setting::set('version', SWARM_VERSION);
 Setting::set('installed_at', date('c'));
 

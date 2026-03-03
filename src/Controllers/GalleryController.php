@@ -18,7 +18,7 @@ class GalleryController
      */
     public function index(): void
     {
-        $galleryEnabled = Setting::get('gallery_enabled', 'true') === 'true';
+        $galleryEnabled = Setting::get('gallery_enabled', 'false') === 'true';
 
         if (!$galleryEnabled) {
             http_response_code(404);

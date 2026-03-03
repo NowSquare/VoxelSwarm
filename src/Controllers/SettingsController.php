@@ -35,9 +35,9 @@ class SettingsController
         Csrf::validate();
 
         $fields = [
-            'base_domain', 'max_instances', 'signups_enabled',
-            'gallery_enabled', 'operator_email', 'control_panel_adapter',
-            'mail_driver',
+            'base_domain', 'max_instances', 'public_site_enabled',
+            'signups_enabled', 'gallery_enabled', 'operator_email',
+            'control_panel_adapter', 'mail_driver',
         ];
 
         foreach ($fields as $field) {
@@ -69,7 +69,7 @@ class SettingsController
         }
 
         // Handle toggle fields (checkboxes)
-        foreach (['signups_enabled', 'gallery_enabled'] as $toggle) {
+        foreach (['public_site_enabled', 'signups_enabled', 'gallery_enabled'] as $toggle) {
             if (!isset($_POST[$toggle])) {
                 Setting::set($toggle, 'false');
             }

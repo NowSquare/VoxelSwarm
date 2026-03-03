@@ -69,13 +69,21 @@ $labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5
         <label class="<?= $labelClass ?>">Features</label>
         <div class="space-y-3 pt-2">
           <label class="flex items-center gap-3 cursor-pointer group">
+            <input type="checkbox" name="public_site_enabled" value="true" class="sw-checkbox"
+                   <?= ($s['public_site_enabled'] ?? 'false') === 'true' ? 'checked' : '' ?>>
+            <div>
+              <span class="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Public Site Enabled</span>
+              <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Show the marketing page and signup form at the root URL. When off, visitors are redirected to operator login.</p>
+            </div>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer group">
             <input type="checkbox" name="signups_enabled" value="true" class="sw-checkbox"
-                   <?= ($s['signups_enabled'] ?? 'true') === 'true' ? 'checked' : '' ?>>
+                   <?= ($s['signups_enabled'] ?? 'false') === 'true' ? 'checked' : '' ?>>
             <span class="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Public Signups Enabled</span>
           </label>
           <label class="flex items-center gap-3 cursor-pointer group">
             <input type="checkbox" name="gallery_enabled" value="true" class="sw-checkbox"
-                   <?= ($s['gallery_enabled'] ?? 'true') === 'true' ? 'checked' : '' ?>>
+                   <?= ($s['gallery_enabled'] ?? 'false') === 'true' ? 'checked' : '' ?>>
             <span class="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Public Demo Gallery Enabled</span>
           </label>
         </div>
@@ -97,11 +105,21 @@ $labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5
       <div class="max-w-md mb-6">
         <label class="<?= $labelClass ?>" for="control_panel_adapter">Adapter</label>
         <select class="<?= $inputClass ?> sw-select" id="control_panel_adapter" name="control_panel_adapter" onchange="toggleAdapterFields()">
+          <option value="local" <?= ($s['control_panel_adapter'] ?? '') === 'local' ? 'selected' : '' ?>>Filesystem (Local / Custom path)</option>
           <option value="nginx" <?= ($s['control_panel_adapter'] ?? '') === 'nginx' ? 'selected' : '' ?>>Nginx (Direct Configuration)</option>
           <option value="forge" <?= ($s['control_panel_adapter'] ?? '') === 'forge' ? 'selected' : '' ?>>Laravel Forge via API</option>
           <option value="cpanel" <?= ($s['control_panel_adapter'] ?? '') === 'cpanel' ? 'selected' : '' ?>>cPanel / WHM via API</option>
           <option value="plesk" <?= ($s['control_panel_adapter'] ?? '') === 'plesk' ? 'selected' : '' ?>>Plesk via API</option>
         </select>
+      </div>
+
+      <!-- Local/Filesystem fields -->
+      <div id="adapter-local" class="adapter-fields hidden grid grid-cols-1 gap-6 bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50">
+        <div>
+          <label class="<?= $labelClass ?>">Instances Root Path</label>
+          <input class="<?= $inputClass ?>" type="text" name="adapter_config[instances_root]" placeholder="<?= SWARM_STORAGE ?>/instances" value="<?= sv($ac, 'instances_root') ?>">
+          <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-1.5">Absolute path where instance directories are created. Leave empty for the default (<code class="text-xs bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded">storage/instances</code>). No subdomain or web server configuration is performed — use this for testing or custom setups.</p>
+        </div>
       </div>
 
       <!-- Nginx fields -->
