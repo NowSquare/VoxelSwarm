@@ -21,6 +21,9 @@ use Swarm\Controllers\DashboardController;
 use Swarm\Controllers\InstanceController;
 use Swarm\Controllers\InstallController;
 use Swarm\Controllers\SettingsController;
+use Swarm\Controllers\DeploymentController;
+use Swarm\Controllers\AccountController;
+use Swarm\Controllers\SystemController;
 use Swarm\Controllers\TemplateController;
 
 $router = new Router();
@@ -32,6 +35,12 @@ $isAssetRoute = preg_match('/\.(css|js|png|jpg|svg|ico|woff2?)$/', $requestUri);
 
 if (!isInstalled() && !$isInstallRoute && !$isAssetRoute) {
     header('Location: /install');
+    exit;
+}
+
+// ── Redirect old /operator/settings to /operator/deployment ──
+if (rtrim($requestUri, '/') === '/operator/settings') {
+    header('Location: /operator/deployment', true, 301);
     exit;
 }
 
@@ -56,24 +65,33 @@ $router->post('/operator/logout',        [AuthController::class,      'destroy']
 
 // ── Operator dashboard (session-protected) ──
 $router->group(['prefix' => '/operator', 'middleware' => ['auth']], function (Router $r) {
-    $r->get('/',                              [DashboardController::class,  'index']);
-    $r->get('/instances',                     [InstanceController::class,   'index']);
-    $r->post('/instances',                    [InstanceController::class,   'store']);
-    $r->get('/instances/{id}',                [InstanceController::class,   'show']);
-    $r->patch('/instances/{id}',              [InstanceController::class,   'update']);
-    $r->delete('/instances/{id}',             [InstanceController::class,   'destroy']);
-    $r->post('/instances/{id}/pause',         [InstanceController::class,   'pause']);
-    $r->post('/instances/{id}/resume',        [InstanceController::class,   'resume']);
-    $r->post('/instances/{id}/gallery',       [InstanceController::class,   'markGallery']);
-    $r->get('/templates',                     [TemplateController::class,   'index']);
-    $r->post('/templates/process',            [TemplateController::class,   'process']);
-    $r->post('/templates/activate',           [TemplateController::class,   'activate']);
-    $r->post('/templates/delete-zip',         [TemplateController::class,   'deleteZip']);
-    $r->post('/templates/delete-version',     [TemplateController::class,   'deleteVersion']);
-    $r->get('/settings',                      [SettingsController::class,   'index']);
-    $r->put('/settings',                      [SettingsController::class,   'update']);
-    $r->post('/settings/adapter/test',        [SettingsController::class,   'testAdapter']);
-    $r->post('/settings/mail/test',           [SettingsController::class,   'testMail']);
+    $r->get('/',                              [DashboardController::class,    'index']);
+    $r->get('/instances',                     [InstanceController::class,     'index']);
+    $r->post('/instances',                    [InstanceController::class,     'store']);
+    $r->get('/instances/{id}',                [InstanceController::class,     'show']);
+    $r->patch('/instances/{id}',              [InstanceController::class,     'update']);
+    $r->delete('/instances/{id}',             [InstanceController::class,     'destroy']);
+    $r->post('/instances/{id}/pause',         [InstanceController::class,     'pause']);
+    $r->post('/instances/{id}/resume',        [InstanceController::class,     'resume']);
+    $r->post('/instances/{id}/gallery',       [InstanceController::class,     'markGallery']);
+    $r->get('/templates',                     [TemplateController::class,     'index']);
+    $r->post('/templates/process',            [TemplateController::class,     'process']);
+    $r->post('/templates/activate',           [TemplateController::class,     'activate']);
+    $r->post('/templates/delete-zip',         [TemplateController::class,     'deleteZip']);
+    $r->post('/templates/delete-version',     [TemplateController::class,     'deleteVersion']);
+    $r->get('/deployment',                    [DeploymentController::class,   'index']);
+    $r->put('/deployment',                    [DeploymentController::class,   'update']);
+    $r->post('/deployment/adapter/test',      [DeploymentController::class,   'testAdapter']);
+    $r->post('/deployment/mail/test',         [DeploymentController::class,   'testMail']);
+    $r->get('/account',                       [AccountController::class,      'index']);
+    $r->put('/account',                       [AccountController::class,      'update']);
+    $r->get('/system',                        [SystemController::class,       'index']);
+    $r->post('/system/git-pull',              [SystemController::class,       'gitPull']);
+    $r->get('/system/logs/download',          [SystemController::class,       'downloadLog']);
+    $r->post('/system/logs/delete',           [SystemController::class,       'deleteLog']);
+    $r->post('/system/refresh',              [SystemController::class,       'refresh']);
+    $r->post('/system/reset',                 [SystemController::class,       'reset']);
 });
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+

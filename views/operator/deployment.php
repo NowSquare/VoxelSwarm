@@ -1,14 +1,11 @@
 <?php
 /**
- * Settings page — operator configuration.
+ * Deployment page — adapter, domain, instance limits, public site, notifications.
  *
- * Sections:
- *   1. Deployment   — adapter + base domain + instance limit
- *   2. Public Site   — landing page + signups toggles
- *   3. Notifications — email driver + SMTP config
- *   4. Account       — operator email + password change
+ * This is the system-level configuration: how instances are created,
+ * what visitors see, and how the system sends emails.
  */
-$pageTitle = 'Settings — VoxelSwarm';
+$pageTitle = 'Deployment — VoxelSwarm';
 $s  = $settings;
 $ac = \Swarm\Models\Setting::getJson('adapter_config', []);
 $mc = \Swarm\Models\Setting::getJson('mail_config', []);
@@ -28,8 +25,8 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
 ?>
 
 <div class="mb-8">
-  <h1 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Settings</h1>
-  <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage how instances are deployed, what visitors see, and how the system reaches you.</p>
+  <h1 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Deployment</h1>
+  <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">How instances are provisioned, what visitors see, and how the system reaches you.</p>
 </div>
 
 <?php if (!empty($flash)): ?>
@@ -38,19 +35,18 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
   </div>
 <?php endif; ?>
 
-<form method="POST" action="/operator/settings" class="space-y-6">
+<form method="POST" action="/operator/deployment" class="space-y-6">
   <?= $csrfField ?>
   <input type="hidden" name="_method" value="PUT">
 
   <!-- ═══════════════════════════════════════════════════════════
-       SECTION 1: DEPLOYMENT
-       How and where instances are created.
+       SECTION 1: ADAPTER & INFRASTRUCTURE
        ═══════════════════════════════════════════════════════════ -->
   <div class="<?= $cardClass ?>">
     <div class="<?= $headerClass ?> flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
-        <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Deployment</h2>
-        <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">How instances are created and where they live.</p>
+        <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Adapter</h2>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">How VoxelSwarm creates instance directories and routes traffic.</p>
       </div>
       <button type="button" id="btn-test-adapter" onclick="testAdapter()"
               class="sw-btn-secondary px-3 py-1.5 text-xs">
@@ -61,25 +57,26 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
     <div class="p-6 space-y-6">
       <!-- Adapter selection -->
       <div>
-        <label class="<?= $labelClass ?>" for="control_panel_adapter">Adapter</label>
+        <label class="<?= $labelClass ?>" for="control_panel_adapter">Control Panel</label>
         <select class="<?= $inputClass ?> sw-select max-w-md" id="control_panel_adapter" name="control_panel_adapter" onchange="onAdapterChange()">
           <option value="local" <?= $adapter === 'local' ? 'selected' : '' ?>>Filesystem (Local)</option>
-          <option value="nginx" <?= $adapter === 'nginx' ? 'selected' : '' ?>>Nginx (Direct Configuration)</option>
+          <option value="nginx" <?= $adapter === 'nginx' ? 'selected' : '' ?>>Nginx (Direct Config)</option>
           <option value="forge" <?= $adapter === 'forge' ? 'selected' : '' ?>>Laravel Forge</option>
           <option value="cpanel" <?= $adapter === 'cpanel' ? 'selected' : '' ?>>cPanel / WHM</option>
           <option value="plesk" <?= $adapter === 'plesk' ? 'selected' : '' ?>>Plesk</option>
         </select>
-        <p class="<?= $hintClass ?>">Determines how VoxelSwarm creates subdomains and routes traffic to each instance.</p>
       </div>
 
       <!-- Adapter-specific config panels -->
       <div id="adapter-local" class="adapter-fields hidden">
         <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 space-y-4">
           <div>
-            <label class="<?= $labelClass ?>">Instances Root Path</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg> Instances Path</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[instances_root]"
                    placeholder="<?= SWARM_STORAGE ?>/instances" value="<?= sv($ac, 'instances_root') ?>">
-            <p class="<?= $hintClass ?>">Absolute path where instance directories are created. Leave empty for the default. No subdomain or web server configuration is performed.</p>
+            <p class="<?= $hintClass ?>">Where instance directories are created. Leave empty for the default.</p>
           </div>
         </div>
       </div>
@@ -87,20 +84,28 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       <div id="adapter-nginx" class="adapter-fields hidden">
         <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="<?= $labelClass ?>">Nginx Conf Directory</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg> Conf Directory</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[conf_dir]" placeholder="/etc/nginx/conf.d" value="<?= sv($ac, 'conf_dir') ?>">
           </div>
           <div>
-            <label class="<?= $labelClass ?>">Reload Command</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg> Reload Command</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[reload_cmd]" placeholder="nginx -t && systemctl reload nginx" value="<?= sv($ac, 'reload_cmd') ?>">
           </div>
           <div>
-            <label class="<?= $labelClass ?>">SSL Certificate Path</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> SSL Certificate</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[ssl_cert_path]" placeholder="/etc/ssl/certs/wildcard.pem" value="<?= sv($ac, 'ssl_cert_path') ?>">
             <p class="<?= $hintClass ?>">Wildcard cert for *.yourdomain.com</p>
           </div>
           <div>
-            <label class="<?= $labelClass ?>">SSL Key Path</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> SSL Key</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[ssl_key_path]" placeholder="/etc/ssl/private/wildcard.key" value="<?= sv($ac, 'ssl_key_path') ?>">
           </div>
         </div>
@@ -109,14 +114,18 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       <div id="adapter-forge" class="adapter-fields hidden">
         <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="<?= $labelClass ?>">API Token</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API Token</span>
+            </label>
             <input class="<?= $inputClass ?>" type="password" name="adapter_config[api_token]" placeholder="••••••••••••••••" value="<?= sv($ac, 'api_token') ?>">
-            <p class="<?= $hintClass ?>">Create a token at forge.laravel.com → Account Settings</p>
+            <p class="<?= $hintClass ?>">forge.laravel.com → Account Settings</p>
           </div>
           <div>
-            <label class="<?= $labelClass ?>">Server ID</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> Server ID</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[server_id]" placeholder="123456" value="<?= sv($ac, 'server_id') ?>">
-            <p class="<?= $hintClass ?>">Visible in the URL of your Forge server dashboard</p>
+            <p class="<?= $hintClass ?>">In your Forge server URL</p>
           </div>
         </div>
       </div>
@@ -124,11 +133,15 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       <div id="adapter-cpanel" class="adapter-fields hidden">
         <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="<?= $labelClass ?>">WHM Hostname</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> WHM Hostname</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[hostname]" placeholder="https://your-server.com:2087" value="<?= sv($ac, 'hostname') ?>">
           </div>
           <div>
-            <label class="<?= $labelClass ?>">API Token</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API Token</span>
+            </label>
             <input class="<?= $inputClass ?>" type="password" name="adapter_config[api_token]" placeholder="••••••••••••••••" value="<?= sv($ac, 'api_token') ?>">
           </div>
         </div>
@@ -137,11 +150,15 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       <div id="adapter-plesk" class="adapter-fields hidden">
         <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="<?= $labelClass ?>">Plesk Hostname</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> Hostname</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" name="adapter_config[hostname]" placeholder="https://your-server.com:8443" value="<?= sv($ac, 'hostname') ?>">
           </div>
           <div>
-            <label class="<?= $labelClass ?>">API Key</label>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API Key</span>
+            </label>
             <input class="<?= $inputClass ?>" type="password" name="adapter_config[api_key]" placeholder="••••••••••••••••" value="<?= sv($ac, 'api_key') ?>">
           </div>
         </div>
@@ -153,21 +170,25 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       <div id="domain-fields" class="<?= $usesDomains ? '' : 'hidden' ?> border-t border-zinc-100 dark:border-zinc-800/80 pt-6">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label class="<?= $labelClass ?>" for="base_domain">Base Domain</label>
+            <label class="<?= $labelClass ?>" for="base_domain">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Base Domain</span>
+            </label>
             <input class="<?= $inputClass ?>" type="text" id="base_domain" name="base_domain"
                    value="<?= htmlspecialchars($s['base_domain'] ?? '') ?>" placeholder="voxelsite.com">
-            <p class="<?= $hintClass ?>">Instances are created as subdomains under this domain (e.g. <code class="text-xs bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded">demo.<?= htmlspecialchars($s['base_domain'] ?? 'yourdomain.com') ?></code>).</p>
+            <p class="<?= $hintClass ?>">Instances are created as subdomains, e.g. <code class="text-xs bg-zinc-100 dark:bg-zinc-900 px-1 py-0.5 rounded">demo.<?= htmlspecialchars($s['base_domain'] ?? 'yourdomain.com') ?></code></p>
           </div>
           <div>
-            <label class="<?= $labelClass ?>" for="max_instances">Instance Limit</label>
+            <label class="<?= $labelClass ?>" for="max_instances">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Instance Limit</span>
+            </label>
             <input class="<?= $inputClass ?>" type="number" id="max_instances" name="max_instances"
                    value="<?= htmlspecialchars($s['max_instances'] ?? '100') ?>" min="1">
-            <p class="<?= $hintClass ?>">New signups are blocked once this limit is reached. Each instance uses ~32 MB.</p>
+            <p class="<?= $hintClass ?>">Signups are blocked at this limit. ~32 MB per instance.</p>
           </div>
         </div>
       </div>
 
-      <!-- Instance limit for non-domain adapters (still need the limit) -->
+      <!-- Instance limit for non-domain adapters -->
       <div id="local-limit-field" class="<?= $usesDomains ? 'hidden' : '' ?> border-t border-zinc-100 dark:border-zinc-800/80 pt-6">
         <div class="max-w-md">
           <label class="<?= $labelClass ?>" for="max_instances_local">Instance Limit</label>
@@ -181,12 +202,11 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
 
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 2: PUBLIC SITE
-       Landing page and signup toggles.
        ═══════════════════════════════════════════════════════════ -->
   <div class="<?= $cardClass ?>">
     <div class="<?= $headerClass ?>">
       <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Public Site</h2>
-      <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Control what visitors see at your root URL.</p>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">What visitors see at your root URL.</p>
     </div>
     <div class="p-6 space-y-4">
       <label class="flex items-start gap-3 cursor-pointer group">
@@ -195,7 +215,7 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
                onchange="toggleSignupsVisibility()">
         <div>
           <span class="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-medium">Show landing page</span>
-          <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Display a marketing page at the root URL. When off, visitors go straight to operator login.</p>
+          <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Display a marketing page at the root URL. When off, visitors go straight to operator login.</p>
         </div>
       </label>
       <div id="signups-toggle" class="ml-8 <?= ($s['public_site_enabled'] ?? 'false') !== 'true' ? 'opacity-40 pointer-events-none' : '' ?> transition-opacity duration-200">
@@ -204,7 +224,7 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
                  <?= ($s['signups_enabled'] ?? 'false') === 'true' ? 'checked' : '' ?>>
           <div>
             <span class="text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-medium">Accept signups</span>
-            <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Let visitors create their own workspace. When off, the landing page shows a "coming soon" message.</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Let visitors create their own workspace. When off, the landing page shows a "coming soon" message.</p>
           </div>
         </label>
       </div>
@@ -213,13 +233,12 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
 
   <!-- ═══════════════════════════════════════════════════════════
        SECTION 3: NOTIFICATIONS
-       Email driver and SMTP configuration.
        ═══════════════════════════════════════════════════════════ -->
   <div class="<?= $cardClass ?>">
     <div class="<?= $headerClass ?> flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
         <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Notifications</h2>
-        <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">How VoxelSwarm sends welcome emails and failure alerts.</p>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Welcome emails and failure alerts.</p>
       </div>
       <button type="button" onclick="testMail()"
               class="sw-btn-secondary px-3 py-1.5 text-xs">
@@ -267,42 +286,9 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       SECTION 4: ACCOUNT
-       Operator email + password.
-       ═══════════════════════════════════════════════════════════ -->
-  <div class="<?= $cardClass ?>">
-    <div class="<?= $headerClass ?>">
-      <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Account</h2>
-      <p class="text-xs text-zinc-500 dark:text-zinc-500 mt-0.5">Your operator identity and credentials.</p>
-    </div>
-    <div class="p-6 space-y-6">
-      <div class="max-w-md">
-        <label class="<?= $labelClass ?>" for="operator_email">Email Address</label>
-        <input class="<?= $inputClass ?>" type="email" id="operator_email" name="operator_email"
-               value="<?= htmlspecialchars($s['operator_email'] ?? '') ?>">
-        <p class="<?= $hintClass ?>">Receives provisioning failure alerts and test emails.</p>
-      </div>
-      <div class="border-t border-zinc-100 dark:border-zinc-800/80 pt-6">
-        <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">Change Password</p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
-          <div>
-            <label class="<?= $labelClass ?>">Current Password</label>
-            <input class="<?= $inputClass ?>" type="password" name="current_password" autocomplete="current-password">
-          </div>
-          <div>
-            <label class="<?= $labelClass ?>">New Password</label>
-            <input class="<?= $inputClass ?>" type="password" name="new_password" minlength="8" autocomplete="new-password">
-          </div>
-        </div>
-        <p class="<?= $hintClass ?>">Leave both empty to keep your current password.</p>
-      </div>
-    </div>
-  </div>
-
   <div class="pt-2 pb-12 flex justify-end">
     <button type="submit" class="sw-btn-primary px-6 py-2.5">
-      Save Settings
+      Save Deployment Settings
     </button>
   </div>
 </form>
@@ -315,16 +301,13 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
     const val = document.getElementById('control_panel_adapter').value;
     const usesDomains = ['nginx', 'forge', 'cpanel', 'plesk'].includes(val);
 
-    // Toggle adapter config panels
     document.querySelectorAll('.adapter-fields').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById('adapter-' + val);
     if (target) target.classList.remove('hidden');
 
-    // Toggle domain vs local fields
     document.getElementById('domain-fields').classList.toggle('hidden', !usesDomains);
     document.getElementById('local-limit-field').classList.toggle('hidden', usesDomains);
 
-    // Sync the instance limit value between the two inputs
     const domainLimit = document.getElementById('max_instances');
     const localLimit = document.getElementById('max_instances_local');
     if (usesDomains) {
@@ -353,8 +336,7 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
   /* ── Mail driver switching ─────────────────────────────────── */
   function toggleMailFields() {
     const val = document.getElementById('mail_driver').value;
-    const el = document.getElementById('mail-smtp-fields');
-    el.classList.toggle('hidden', val !== 'smtp');
+    document.getElementById('mail-smtp-fields').classList.toggle('hidden', val !== 'smtp');
   }
   toggleMailFields();
 
@@ -365,10 +347,23 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
     btn.disabled = true;
     btn.innerHTML = '<span class="flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Testing…</span>';
 
-    fetch('/operator/settings/adapter/test', {
+    // Serialize current form state so we test the selected adapter, not the saved one
+    const adapterName = document.getElementById('control_panel_adapter').value;
+    let body = '_token=' + encodeURIComponent(csrf) + '&adapter=' + encodeURIComponent(adapterName);
+
+    // Collect all adapter_config inputs from the currently visible panel
+    const activePanel = document.getElementById('adapter-' + adapterName);
+    if (activePanel) {
+      activePanel.querySelectorAll('input[name^="adapter_config"]').forEach(input => {
+        const key = input.name.replace('adapter_config[', 'config[');
+        body += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(input.value);
+      });
+    }
+
+    fetch('/operator/deployment/adapter/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: '_token=' + encodeURIComponent(csrf)
+      body: body
     })
     .then(r => r.json())
     .then(data => {
@@ -391,13 +386,13 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
 
   /* ── Test email ────────────────────────────────────────────── */
   function testMail() {
-    fetch('/operator/settings/mail/test', {
+    fetch('/operator/deployment/mail/test', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: '_token=' + encodeURIComponent(csrf)
     })
     .then(r => r.json())
-    .then(data => showToast(data.message, 'info'))
+    .then(data => showToast(data.message, data.ok ? 'success' : 'error'))
     .catch(() => showToast('Request failed', 'error'));
   }
 </script>

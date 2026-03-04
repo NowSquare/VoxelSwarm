@@ -36,7 +36,7 @@ class SettingsController
 
         $fields = [
             'base_domain', 'max_instances', 'public_site_enabled',
-            'signups_enabled', 'gallery_enabled', 'operator_email',
+            'signups_enabled', 'operator_email',
             'control_panel_adapter', 'mail_driver',
         ];
 
@@ -68,8 +68,8 @@ class SettingsController
             Setting::set('operator_password_hash', password_hash($_POST['new_password'], PASSWORD_BCRYPT));
         }
 
-        // Handle toggle fields (checkboxes)
-        foreach (['public_site_enabled', 'signups_enabled', 'gallery_enabled'] as $toggle) {
+        // Handle toggle fields (checkboxes — unchecked = not in POST)
+        foreach (['public_site_enabled', 'signups_enabled'] as $toggle) {
             if (!isset($_POST[$toggle])) {
                 Setting::set($toggle, 'false');
             }
