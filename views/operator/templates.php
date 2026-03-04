@@ -7,7 +7,7 @@ $pageTitle = 'Templates — VoxelSwarm';
 
 <div class="mb-8">
   <h1 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">Templates</h1>
-  <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Manage VoxelSite versions. Upload ZIPs to <code class="text-xs bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">template/voxelsite/</code> via FTP or SSH, then process them here.</p>
+  <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Upload a VoxelSite ZIP via SFTP, process it, and activate a version. Each instance is built from the active template.</p>
 </div>
 
 <?php if (!empty($flash)): ?>
@@ -35,12 +35,32 @@ $pageTitle = 'Templates — VoxelSwarm';
   </div>
 
   <?php if (empty($versions)): ?>
-    <div class="p-8 text-center">
-      <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
-        <svg class="w-6 h-6 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    <div class="p-8">
+      <div class="max-w-md mx-auto text-center">
+        <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center">
+          <svg viewBox="0 0 24 24" class="text-orange-600 dark:text-orange-400" style="width: 22px; height: 22px;">
+            <path class="fill-current opacity-100" d="M12 3L20 7.5L12 12L4 7.5Z" />
+            <path class="fill-current opacity-70" d="M4 7.5L12 12L12 21L4 16.5Z" />
+            <path class="fill-current opacity-40" d="M20 7.5L12 12L12 21L20 16.5Z" />
+          </svg>
+        </div>
+        <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">No template yet</p>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-5">Three steps to your first deployable template.</p>
+        <div class="text-left space-y-3 max-w-xs mx-auto">
+          <div class="flex gap-3 items-start">
+            <span class="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 flex-shrink-0">1</span>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 pt-0.5"><span class="font-medium text-zinc-700 dark:text-zinc-300">Upload</span> a VoxelSite ZIP to <code class="text-[11px] bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">template/voxelsite/</code></p>
+          </div>
+          <div class="flex gap-3 items-start">
+            <span class="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 flex-shrink-0">2</span>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 pt-0.5"><span class="font-medium text-zinc-700 dark:text-zinc-300">Process</span> the ZIP to extract and validate it</p>
+          </div>
+          <div class="flex gap-3 items-start">
+            <span class="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-[11px] font-bold text-zinc-600 dark:text-zinc-400 flex-shrink-0">3</span>
+            <p class="text-xs text-zinc-600 dark:text-zinc-400 pt-0.5"><span class="font-medium text-zinc-700 dark:text-zinc-300">Activate</span> it as the blueprint for new instances</p>
+          </div>
+        </div>
       </div>
-      <p class="text-sm text-zinc-500 dark:text-zinc-400">No versions prepared yet.</p>
-      <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Upload a VoxelSite ZIP and process it below.</p>
     </div>
   <?php else: ?>
     <div class="divide-y divide-zinc-100 dark:divide-zinc-800/80">
@@ -50,7 +70,11 @@ $pageTitle = 'Templates — VoxelSwarm';
             <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 <?= $v['active']
               ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400'
               : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400' ?>">
-              <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              <svg viewBox="0 0 24 24" class="text-orange-600 dark:text-orange-400" style="width: 20px; height: 20px;">
+                <path class="fill-current opacity-100" d="M12 3L20 7.5L12 12L4 7.5Z" />
+                <path class="fill-current opacity-70" d="M4 7.5L12 12L12 21L4 16.5Z" />
+                <path class="fill-current opacity-40" d="M20 7.5L12 12L12 21L20 16.5Z" />
+              </svg>
             </div>
             <div class="min-w-0">
               <div class="flex items-center gap-2">
@@ -90,7 +114,7 @@ $pageTitle = 'Templates — VoxelSwarm';
 <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800/80 rounded-xl shadow-sm dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] overflow-hidden">
   <div class="px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-zinc-800/20">
     <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Available ZIPs</h2>
-    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">VoxelSite ZIP files found in <code class="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">template/voxelsite/</code>. Process a ZIP to extract and prepare it as a template version.</p>
+    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">ZIP files in <code class="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-1 py-0.5 rounded">template/voxelsite/</code>. Process one to create a template version.</p>
   </div>
 
   <?php if (empty($zips)): ?>

@@ -11,11 +11,22 @@ use Swarm\Models\Setting;
  */
 class AdapterFactory
 {
+    /**
+     * Create from saved settings (production use).
+     */
     public static function create(): ControlPanelAdapter
     {
         $adapter = Setting::get('control_panel_adapter', 'nginx');
         $config  = Setting::getJson('adapter_config', []);
 
+        return self::createFrom($adapter, $config);
+    }
+
+    /**
+     * Create from explicit values (e.g. form preview / test connection).
+     */
+    public static function createFrom(string $adapter, array $config): ControlPanelAdapter
+    {
         return match ($adapter) {
             'local'       => new LocalAdapter($config),
             'nginx'       => new NginxAdapter($config),
