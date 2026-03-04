@@ -6,15 +6,20 @@ The operator dashboard is your control center for managing VoxelSwarm. Access it
 
 Single operator password, set during installation. Session lasts 30 days. Rate limited to 5 login attempts per IP per 15 minutes.
 
-To change the password, visit `/operator/settings` → Account section.
+To change the password, visit `/operator/account`.
 
 ## Dashboard Overview
 
-The main dashboard shows:
+The main dashboard has two modes:
 
+**Onboarding** (first visit): A guided 3-step setup — Prepare a template, Configure deployment, Create your first instance.
+
+**Active** (instances exist):
 - **Summary cards:** Total instances, Active, Paused, Storage used
 - **Recent activity:** Last 10 provisioning events
 - **Quick action:** "New Instance" button
+
+Sidebar navigation groups: Dashboard + Instances, Templates + Deployment (CONFIG), Account + System (SYSTEM). Mobile-responsive with slide-in sidebar and backdrop overlay.
 
 ## Instance Management
 
@@ -27,10 +32,11 @@ Filterable table showing all instances:
 
 ### Instance Detail (`/operator/instances/{id}`)
 
-- Full metadata: subdomain link, email, created date, document root
-- **Actions:** Pause/Resume, Mark as Gallery Demo, Delete (with confirmation)
-- **Provision log:** Timeline of provisioning steps with timestamps and durations
-- **Notes:** Free-text field for operator notes
+- **Header:** Instance name, status badge with colored dot, slug in monospace
+- **Details card:** Structured list of icon-led rows (identifier, URL, email, type, created, provisioned)
+- **Actions:** Icon buttons for Pause/Resume & Delete (with confirmation dialog)
+- **Provision Log:** Card-wrapped timeline of provisioning steps
+- **Notes:** Private operator notes with toast notification on save
 
 ### Instance Lifecycle
 
@@ -76,15 +82,28 @@ ZIPs can have any filename (e.g., `codecanyon-yi8z1J7A-...zip`). VoxelSwarm read
 
 Upload ZIPs to the server via FTP/SSH, then process them from this page.
 
-## Settings (`/operator/settings`)
+## Deployment (`/operator/deployment`)
 
 | Section | What you configure |
 |---------|-------------------|
-| **General** | Base domain, max instances, public site toggle, signups toggle, gallery toggle, operator email |
-| **Control Panel** | Adapter selection + adapter-specific config + "Test Connection" button |
-| **Email** | SMTP settings with presets (Gmail, Outlook, Mailpit, Custom) + "Send Test" button |
-| **Account** | Password change |
-| **System** | PHP version, SQLite size, VoxelSwarm version, disk usage |
+| **Adapter** | Control panel adapter + adapter-specific config. Icon-led labels for cognitive unloading. "Test Connection" tests the currently visible form values, not saved settings. |
+| **Public Site** | Landing page toggle + signups toggle |
+| **Notifications** | Email driver (SMTP / Log / Disabled) + SMTP config + "Send Test Email" |
+
+## Account (`/operator/account`)
+
+| Section | What you configure |
+|---------|-------------------|
+| **Email Address** | Operator email. Receives system notifications. |
+| **Password** | Current + new password. |
+
+## System (`/operator/system`)
+
+| Section | What you see |
+|---------|-------------------|
+| **System Status** | PHP version, SQLite version, database size, storage path |
+| **Update** | Current version + update instructions |
+| **Danger Zone** | Refresh Installation (purge instances), Reset Installation (full wipe) |
 
 ## Logs
 
