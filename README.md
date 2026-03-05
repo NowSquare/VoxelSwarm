@@ -158,8 +158,9 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 ## Support
 
-- **Issues:** [github.com/NowSquare/VoxelSwarm/issues](https://github.com/NowSquare/VoxelSwarm/issues)
-- **VoxelSite:** [voxelsite.com](https://voxelsite.com)
+- **Check the logs:** `storage/logs/` contains detailed, structured logs for every provisioning step, adapter call, email, and operator action. See [Troubleshooting → Log Files](docs/troubleshooting.md#log-files) for what each log captures.
+- **Report a bug:** [github.com/NowSquare/VoxelSwarm/issues](https://github.com/NowSquare/VoxelSwarm/issues) — include your environment, steps to reproduce, and relevant log entries. See [Reporting an Issue](docs/troubleshooting.md#reporting-an-issue) for what to include.
+- **VoxelSite:** [voxelsite.com](https://voxelsite.com) — for VoxelSite-specific issues (the AI builder, not VoxelSwarm)
 - **Multi-Site:** [voxelsite.com/multi-site](https://voxelsite.com/multi-site)
 
 ---
