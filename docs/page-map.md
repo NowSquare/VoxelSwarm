@@ -21,10 +21,6 @@ flowchart TD
     signup --> status["/status/{id}"]
     status --> statusApi["/api/status/{id}"]
 
-    root --> gallery["/gallery"]
-    gallery --> galleryToggle{"gallery_enabled"}
-    galleryToggle -- "false" --> gallery404["404 / plain unavailable response"]
-
     login --> operator["/operator"]
     operator --> instances["/operator/instances"]
     instances --> detail["/operator/instances/{id}"]
@@ -32,13 +28,11 @@ flowchart TD
     operator --> deployment["/operator/deployment"]
     operator --> account["/operator/account"]
     operator --> system["/operator/system"]
-
-    legacy["/operator/settings"] --> deployment
 ```
 
 ## Shared Chrome
 
-- Public layout: centered card layout, theme toggle, Inter font. Used by login, signup, status, gallery, and 404 pages.
+- Public layout: centered card layout, theme toggle, Inter font. Used by login, signup, status, and 404 pages.
 - Landing page: standalone marketing page with its own nav, sections, CTA blocks, and theme toggle.
 - Install page: standalone 3-step wizard, not wrapped in the public layout.
 - Operator layout: sidebar with `Dashboard`, `Instances`, `Templates`, `Deployment`, `Account`, `System`; mobile top bar; theme toggle; logout; version badge.
@@ -51,9 +45,8 @@ flowchart TD
 | `/` | Installed and `public_site_enabled=true` | Landing page with nav, hero, value props, 4-step explainer, operator pitch, CTA footer. Signup buttons render only when `signups_enabled=true`. |
 | `/` | Installed and `public_site_enabled=false` | Redirects to `/operator/login`. |
 | `/signup` | Installed and `public_site_enabled=true` | Public signup card. When `signups_enabled=true`, shows business name + email form. When `signups_enabled=false`, shows a "Coming soon" state. |
+| `/signup` | Installed and `public_site_enabled=false` | Redirects to `/operator/login`. |
 | `/status/{id}` | Any time the instance exists | Provisioning status card with polling, success CTA to `https://{subdomain}/_studio/`, or failure state. If the instance does not exist, shows a not-found state. |
-| `/gallery` | `gallery_enabled=true` | Demo gallery grid of active instances with optional thumbnails from `storage/gallery/{slug}.jpg`. |
-| `/gallery` | `gallery_enabled=false` | Not available. The controller returns a plain unavailable response instead of rendering the gallery page. |
 | `/operator/login` | Installed and operator is logged out | Password-only login form with flash error state. |
 | `404` | No route matched | Public 404 card with a back-to-home button. |
 
@@ -70,7 +63,6 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 | `/operator/deployment` | Authenticated | Three cards: `Adapter`, `Public Site`, and `Notifications`. Includes `Test Connection` and `Send Test Email`. The current adapter dropdown exposes `local`, `nginx`, `forge`, `cpanel`, and `plesk`. |
 | `/operator/account` | Authenticated | Operator email form and password change form. |
 | `/operator/system` | Authenticated | `System Status`, `Update`, `Server Logs`, and password-confirmed `Danger Zone` actions for refresh/reset. |
-| `/operator/settings` | Any installed state | Legacy URL. `index.php` redirects it to `/operator/deployment` with HTTP 301. It is not an active page anymore. |
 
 ## Page Actions And State Transitions
 
@@ -92,8 +84,7 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 |--------|--------------------|------------------|
 | `public_site_enabled` | Install defaults + `/operator/deployment` | Whether `/` renders the landing page or redirects to `/operator/login`. |
 | `signups_enabled` | Install defaults + `/operator/deployment` | Whether landing page CTAs point to signup and whether `/signup` shows the form or a "Coming soon" state. |
-| `gallery_enabled` | Install defaults only in the current UI; manual/CLI otherwise | Whether `/gallery` is available. There is no operator dashboard toggle for this yet. |
-| `base_domain` | Install + `/operator/deployment` | Instance subdomain generation, status CTA URL, landing copy examples, and gallery links. |
+| `base_domain` | Install + `/operator/deployment` | Instance subdomain generation, status CTA URL, and landing copy examples. |
 | `max_instances` | `/operator/deployment` | Blocks new public signups once the total instance count reaches the configured limit. |
 | `control_panel_adapter` | Install + `/operator/deployment` | Which adapter provisions instances and whether the new-instance modal is subdomain-based or path-based. |
 | `adapter_config` | Install + `/operator/deployment` | Adapter-specific credentials and filesystem/server config. |
@@ -105,8 +96,6 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 | `template_path` | Set during install; updated when a template version is activated | Which prepared VoxelSite version the provisioner copies. |
 | `app_key`, `version`, `installed_at` | System-managed | Encryption, version tracking, and install metadata. |
 
-## Implementation Notes
+## Notes
 
-- `views/operator/settings.php` and `src/Controllers/SettingsController.php` still exist in the repository, but the route is no longer active. Documentation should treat `/operator/deployment` and `/operator/account` as the real settings surfaces.
-- The public gallery is partially implemented in code, but the current operator UI does not expose a gallery toggle or a "mark as gallery" action.
 - The status polling endpoint `/api/status/{id}` is not a page, but it is part of the visible provisioning flow and should be documented alongside `/status/{id}`.

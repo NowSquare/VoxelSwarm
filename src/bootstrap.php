@@ -23,7 +23,6 @@ $storageDirs = [
     SWARM_STORAGE,
     SWARM_STORAGE . '/logs',
     SWARM_STORAGE . '/instances',
-    SWARM_STORAGE . '/gallery',
 ];
 
 foreach ($storageDirs as $dir) {

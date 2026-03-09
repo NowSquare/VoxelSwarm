@@ -137,7 +137,7 @@ class InstanceController
     }
 
     /**
-     * PATCH /operator/instances/{id} — Update instance (notes, type).
+     * PATCH /operator/instances/{id} — Update instance notes.
      */
     public function update(string $id): void
     {
@@ -243,22 +243,5 @@ class InstanceController
         Instance::update((int) $id, ['status' => 'active']);
 
         Response::json(['ok' => true, 'status' => 'active']);
-    }
-
-    /**
-     * POST /operator/instances/{id}/gallery — Mark as gallery demo.
-     */
-    public function markGallery(string $id): void
-    {
-        Csrf::validate();
-
-        $instance = Instance::find((int) $id);
-        if (!$instance || $instance['status'] !== 'active') {
-            Response::json(['error' => 'Instance must be active to mark as gallery'], 422);
-        }
-
-        Instance::update((int) $id, ['type' => 'gallery']);
-
-        Response::json(['ok' => true, 'type' => 'gallery']);
     }
 }

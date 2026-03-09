@@ -2,12 +2,10 @@
 
 VoxelSwarm stores runtime configuration in the SQLite `settings` table inside `storage/swarm.db`. The web install wizard creates the first values, then the operator updates them from the dashboard.
 
-The active settings UI is split across:
+The settings UI is split across:
 
 - `/operator/deployment` for infrastructure, public-site, and mail settings
 - `/operator/account` for operator email and password
-
-`/operator/settings` is now only a legacy redirect to `/operator/deployment`.
 
 For a route-by-route map of where each setting is used, see [page-map.md](page-map.md).
 
@@ -37,12 +35,6 @@ For a route-by-route map of where each setting is used, see [page-map.md](page-m
 | `app_key` | AES-256-CBC encryption key for sensitive stored values. Generated once during install. |
 | `version` | Installed VoxelSwarm version. |
 | `installed_at` | ISO-8601 install timestamp. |
-
-### Code-Backed But Not Currently Exposed In The Dashboard
-
-| Setting | Description |
-|---------|-------------|
-| `gallery_enabled` | Enables the public `/gallery` page. The current operator UI does not expose a toggle for this. |
 
 ## Control Panel Settings
 

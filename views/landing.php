@@ -253,29 +253,6 @@
       text-decoration: none;
     }
     .sw-btn-primary:active { transform: translateY(0); }
-    .sw-btn-ghost {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 28px;
-      font-size: 15px;
-      font-weight: 600;
-      font-family: inherit;
-      color: var(--sw-text-secondary);
-      background: transparent;
-      border: 1.5px solid var(--sw-border);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      text-decoration: none;
-    }
-    .sw-btn-ghost:hover {
-      color: var(--sw-text);
-      border-color: var(--sw-text-muted);
-      background: var(--sw-accent-soft);
-      text-decoration: none;
-    }
-
     /* ── Sections ── */
     .sw-section {
       padding: 100px 24px;
@@ -576,7 +553,6 @@
       <span>VoxelSwarm</span>
     </a>
     <div class="sw-nav-links">
-      <a href="/gallery" class="sw-nav-link">Gallery</a>
       <a href="/operator/login" class="sw-nav-link">Operator</a>
       <button class="sw-theme-toggle" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
         <svg id="theme-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
@@ -616,7 +592,6 @@
       <?php else: ?>
         <span class="sw-btn-primary" style="opacity:0.6;cursor:default;">Coming Soon</span>
       <?php endif; ?>
-      <a href="/gallery" class="sw-btn-ghost">View Gallery</a>
     </div>
   </section>
 
@@ -711,10 +686,6 @@
             <li>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               Pause, resume, and delete instances
-            </li>
-            <li>
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              Built-in gallery of demo sites
             </li>
             <li>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

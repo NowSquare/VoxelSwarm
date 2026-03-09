@@ -323,10 +323,6 @@ Behavior matrix:
 | On | Off | `/` shows the landing page, but signup CTAs switch to a disabled/coming-soon state and `/signup` shows a `Coming soon` message. |
 | On | On | `/` shows the landing page and `/signup` shows the public signup form. |
 
-Important limitation:
-
-- The public gallery is not configured here. `gallery_enabled` exists in code, but there is no dashboard toggle for it yet.
-
 ### Notifications
 
 This section controls email behavior.
@@ -434,7 +430,7 @@ Both actions require password confirmation in a modal before execution.
 
 ## Public Pages Controlled By Deployment
 
-These pages are not part of the operator layout. The landing page and signup flow are controlled from `Deployment > Public Site`. The gallery is separate and currently controlled only by the `gallery_enabled` setting in code.
+These pages are not part of the operator layout. The landing page and signup flow are controlled from `Deployment > Public Site`.
 
 ### Landing Page (`/`)
 
@@ -445,7 +441,6 @@ Main content:
 - Hero
 - marketing sections
 - CTA buttons
-- `Gallery` link
 - `Operator` link
 
 The CTA behavior depends on `Accept signups`.
@@ -469,19 +464,6 @@ States:
 - success state with workspace CTA
 - failure state
 - not-found state
-
-### Gallery (`/gallery`)
-
-Visible only when `gallery_enabled=true`.
-
-If enabled:
-
-- Shows active gallery instances in a grid
-- Uses thumbnail images from `storage/gallery/` when present
-
-If disabled:
-
-- The controller returns a 404-style unavailable response
 
 ## Logging
 

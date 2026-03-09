@@ -15,12 +15,10 @@ use Swarm\Router;
 use Swarm\Controllers\LandingController;
 use Swarm\Controllers\SignupController;
 use Swarm\Controllers\StatusController;
-use Swarm\Controllers\GalleryController;
 use Swarm\Controllers\AuthController;
 use Swarm\Controllers\DashboardController;
 use Swarm\Controllers\InstanceController;
 use Swarm\Controllers\InstallController;
-use Swarm\Controllers\SettingsController;
 use Swarm\Controllers\DeploymentController;
 use Swarm\Controllers\AccountController;
 use Swarm\Controllers\SystemController;
@@ -38,12 +36,6 @@ if (!isInstalled() && !$isInstallRoute && !$isAssetRoute) {
     exit;
 }
 
-// ── Redirect old /operator/settings to /operator/deployment ──
-if (rtrim($requestUri, '/') === '/operator/settings') {
-    header('Location: /operator/deployment', true, 301);
-    exit;
-}
-
 // ── Install wizard (only accessible when not installed) ──
 $router->get('/install',               [InstallController::class,  'index']);
 $router->post('/install/check',        [InstallController::class,  'check']);
@@ -56,7 +48,6 @@ $router->get('/signup',                  [SignupController::class,    'index']);
 $router->post('/signup',                 [SignupController::class,    'store'],  ['throttle:signup']);
 $router->get('/status/{id}',             [StatusController::class,    'show']);
 $router->get('/api/status/{id}',         [StatusController::class,    'json']);
-$router->get('/gallery',                 [GalleryController::class,   'index']);
 
 // ── Operator auth ──
 $router->get('/operator/login',          [AuthController::class,      'show']);
@@ -73,7 +64,6 @@ $router->group(['prefix' => '/operator', 'middleware' => ['auth']], function (Ro
     $r->delete('/instances/{id}',             [InstanceController::class,     'destroy']);
     $r->post('/instances/{id}/pause',         [InstanceController::class,     'pause']);
     $r->post('/instances/{id}/resume',        [InstanceController::class,     'resume']);
-    $r->post('/instances/{id}/gallery',       [InstanceController::class,     'markGallery']);
     $r->get('/templates',                     [TemplateController::class,     'index']);
     $r->post('/templates/process',            [TemplateController::class,     'process']);
     $r->post('/templates/activate',           [TemplateController::class,     'activate']);
@@ -94,4 +84,3 @@ $router->group(['prefix' => '/operator', 'middleware' => ['auth']], function (Ro
 });
 
 $router->dispatch($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-

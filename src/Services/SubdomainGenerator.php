@@ -18,7 +18,7 @@ class SubdomainGenerator
     private const RESERVED = [
         'www', 'app', 'api', 'mail', 'admin', 'dashboard',
         'swarm', 'operator', 'static', 'assets', 'demo',
-        'gallery', 'status', 'health', 'login', 'logout',
+        'status', 'health', 'login', 'logout',
         'signup', 'install', 'support', 'help', 'billing', 'account',
     ];
 

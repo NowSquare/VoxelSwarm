@@ -181,7 +181,6 @@ echo "\n";
 Setting::set('max_instances', Setting::get('max_instances', '100'));
 Setting::set('public_site_enabled', Setting::get('public_site_enabled', 'false'));
 Setting::set('signups_enabled', Setting::get('signups_enabled', 'false'));
-Setting::set('gallery_enabled', Setting::get('gallery_enabled', 'false'));
 Setting::set('version', SWARM_VERSION);
 Setting::set('installed_at', date('c'));
 

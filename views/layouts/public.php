@@ -1,6 +1,6 @@
 <?php
 /**
- * Public layout — used by signup, status, gallery, login, 404 pages.
+ * Public layout — used by signup, status, login, and 404 pages.
  * Receives $content from Response::view()
  */
 $pageTitle = $pageTitle ?? 'VoxelSwarm';

@@ -117,16 +117,6 @@ class Instance
     }
 
     /**
-     * Get instances marked as gallery demos.
-     */
-    public static function gallery(): array
-    {
-        return Database::query(
-            "SELECT * FROM instances WHERE type = 'gallery' AND status = 'active' ORDER BY created_at DESC"
-        )->fetchAll();
-    }
-
-    /**
      * Count instances by status.
      */
     public static function countByStatus(): array
