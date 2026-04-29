@@ -144,8 +144,9 @@ switch ($adapter) {
         $adapterConfig['server_id'] = prompt('Forge Server ID', '');
         break;
     case 'cpanel':
-        $adapterConfig['hostname']  = prompt('WHM hostname (https://...)', '');
-        $adapterConfig['api_token'] = prompt('WHM API token', '');
+        $adapterConfig['hostname']     = prompt('WHM hostname (https://...)', '');
+        $adapterConfig['whm_username'] = prompt('WHM username', 'root');
+        $adapterConfig['api_token']    = prompt('WHM API token', '');
         break;
     case 'plesk':
         $adapterConfig['hostname'] = prompt('Plesk hostname (https://...)', '');

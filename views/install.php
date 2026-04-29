@@ -209,6 +209,11 @@ $pageTitle = 'Install — VoxelSwarm';
             <input type="text" class="install-input" x-model="form.adapter_config.hostname" placeholder="https://your-server.com:2087">
           </div>
           <div>
+            <label class="install-label">WHM Username</label>
+            <input type="text" class="install-input" x-model="form.adapter_config.whm_username" placeholder="root">
+            <p class="install-hint">The WHM user that owns the API token. Usually root.</p>
+          </div>
+          <div>
             <label class="install-label">WHM API Token</label>
             <input type="password" class="install-input" x-model="form.adapter_config.api_token" placeholder="Your WHM API token">
           </div>

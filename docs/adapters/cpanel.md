@@ -26,6 +26,7 @@ SSL handling depends on your cPanel setup. VoxelSwarm does not trigger AutoSSL d
 | Field | Description | Example |
 |-------|-------------|---------|
 | `hostname` | WHM base URL. `https://server.example.com` and `https://server.example.com:2087` are both accepted. | `https://server.example.com:2087` |
+| `whm_username` | The WHM user that owns the API token. Defaults to `root`. If your token was created under a reseller or secondary admin account, enter that username. | `root` |
 | `api_token` | WHM API token | `ABCDEF123456...` |
 
 ### Getting a WHM API Token
@@ -35,9 +36,17 @@ SSL handling depends on your cPanel setup. VoxelSwarm does not trigger AutoSSL d
 3. Create a new token
 4. Copy the token
 
+The token must have `create-subdomains` and `delete-subdomains` in its ACL.
+
+### WHM Username
+
+The API token is tied to a specific WHM user. VoxelSwarm sends the token as that user in the `Authorization` header. If you created the token while logged in as `root`, leave the username as `root`. If you created it under a reseller account, enter the reseller's username.
+
+A mismatch between the username and the token owner produces a `403 Forbidden` error on every API call.
+
 ## Troubleshooting
 
-- **"Access denied" errors:** Ensure you're using a WHM token, not a cPanel token
+- **`403 Forbidden Access denied`:** The username and token don't match. Check which WHM user owns the token and set `whm_username` accordingly. Also verify the token has `create-subdomains` and `delete-subdomains` ACL permissions.
 - **AutoSSL not issuing certificates:** Check WHM → SSL/TLS → Manage AutoSSL. Ensure all providers are enabled
 - **Subdomain not resolving:** Verify wildcard DNS points to the cPanel server
 - **504 Gateway Timeout:** WHM API can be slow on shared hosting — health check retries should handle this

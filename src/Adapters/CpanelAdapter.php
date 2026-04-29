@@ -12,13 +12,15 @@ class CpanelAdapter implements ControlPanelAdapter
 {
     private string $hostname;
     private string $apiToken;
+    private string $whmUsername;
     private string $baseDomain;
 
     public function __construct(array $config)
     {
-        $this->hostname   = rtrim($config['hostname'] ?? '', '/');
-        $this->apiToken   = $config['api_token'] ?? '';
-        $this->baseDomain = \Swarm\Models\Setting::get('base_domain', 'localhost');
+        $this->hostname    = rtrim($config['hostname'] ?? '', '/');
+        $this->apiToken    = $config['api_token'] ?? '';
+        $this->whmUsername = trim($config['whm_username'] ?? '') ?: 'root';
+        $this->baseDomain  = \Swarm\Models\Setting::get('base_domain', 'localhost');
     }
 
     public function createSubdomain(string $slug, string $documentRoot): void
@@ -80,7 +82,7 @@ class CpanelAdapter implements ControlPanelAdapter
         $context = stream_context_create([
             'http' => [
                 'method'  => 'GET',
-                'header'  => "Authorization: whm root:{$this->apiToken}\r\n",
+                'header'  => "Authorization: whm {$this->whmUsername}:{$this->apiToken}\r\n",
                 'timeout' => 30,
                 'ignore_errors' => true,
             ],
