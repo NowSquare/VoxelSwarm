@@ -45,7 +45,7 @@ Each adapter has specific requirements. Check [docs/adapters/](adapters/README.m
 Common issues:
 - **Nginx:** PHP process needs write access to conf directory and permission to reload Nginx
 - **Forge:** API token must have site management permissions
-- **cPanel:** WHM API token required (not cPanel token) with subdomain management privileges
+- **cPanel:** WHM API token required (not cPanel token) with subdomain management privileges. The WHM username in Deployment must match the user that owns the token — a mismatch produces `403 Forbidden`
 - **Plesk:** API key with subscription management permissions
 
 ### Subdomain not accessible after creation

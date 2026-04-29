@@ -288,6 +288,7 @@ Shows:
 Shows:
 
 - `WHM Hostname`
+- `WHM Username`
 - `API Token`
 - `Base Domain`
 - `Instance Limit`
