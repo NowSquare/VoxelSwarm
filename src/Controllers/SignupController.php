@@ -63,12 +63,53 @@ class SignupController
         $name  = trim($_POST['name']);
         $email = trim(strtolower($_POST['email']));
 
-        // Check duplicate email
-        if (Instance::findByEmail($email)) {
-            Response::back([
-                'errors' => ['email' => 'This email already has a workspace.'],
-                'old'    => $_POST,
-            ]);
+        // Check duplicate email — two-pass: block first, then retry
+        $allExisting = Instance::findAllByEmail($email);
+        if (!empty($allExisting)) {
+            // Pass 1: Block if ANY instance is live or operator-owned
+            foreach ($allExisting as $row) {
+                if ($row['type'] !== 'tenant') {
+                    Response::back([
+                        'errors' => ['email' => 'This email already has a workspace.'],
+                        'old'    => $_POST,
+                    ]);
+                }
+                if (in_array($row['status'], ['active', 'paused'], true)) {
+                    Response::back([
+                        'errors' => ['email' => 'This email already has a workspace.'],
+                        'old'    => $_POST,
+                    ]);
+                }
+            }
+
+            // Pass 2: Clean up retryable tenant instances (whitelisted statuses only)
+            foreach ($allExisting as $row) {
+                if ($row['status'] === 'failed') {
+                    // Failed — safe to clean up and retry
+                    self::cleanupInstance($row);
+                    continue;
+                }
+
+                if (in_array($row['status'], ['queued', 'provisioning'], true)) {
+                    $updatedAt = strtotime($row['updated_at'] ?? $row['created_at']);
+                    $staleThreshold = 5 * 60; // 5 minutes
+
+                    if ((time() - $updatedAt) < $staleThreshold) {
+                        // Still in-flight — redirect to the existing status page
+                        Response::redirect('/status/' . $row['id']);
+                    }
+
+                    // Stale (stuck >5 min) — safe to clean up
+                    self::cleanupInstance($row);
+                    continue;
+                }
+
+                // Unknown status — block signup as safety measure
+                Response::back([
+                    'errors' => ['email' => 'This email already has a workspace.'],
+                    'old'    => $_POST,
+                ]);
+            }
         }
 
         // Check max instances
@@ -117,5 +158,36 @@ class SignupController
 
         // Provision in background
         Provisioner::run($instanceId);
+    }
+
+    /**
+     * Clean up a broken/stale instance to allow signup retry.
+     * Removes files, subdomain routing, and the database record.
+     */
+    private static function cleanupInstance(array $instance): void
+    {
+        \Swarm\Logger::info('provision', 'Cleaning up previous instance for retry', [
+            'email'      => $instance['email'],
+            'old_slug'   => $instance['slug'],
+            'old_status' => $instance['status'],
+        ]);
+
+        // Remove files if any were created
+        $oldPath = $instance['document_root']
+            ?? (Setting::get('instances_path', SWARM_STORAGE . '/instances') . '/' . $instance['slug']);
+        if (is_dir($oldPath)) {
+            Provisioner::deleteDirectory($oldPath);
+        }
+
+        // Remove subdomain routing if any was created
+        try {
+            $adapter = \Swarm\Adapters\AdapterFactory::create();
+            $adapter->removeSubdomain($instance['slug']);
+        } catch (\Throwable) {
+            // Best effort — may not have been created
+        }
+
+        // Delete the old record (FK-safe: provision_logs deleted first)
+        Instance::hardDelete((int) $instance['id']);
     }
 }

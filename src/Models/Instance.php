@@ -64,6 +64,17 @@ class Instance
     }
 
     /**
+     * Find all instances by email (for multi-row conflict checking).
+     */
+    public static function findAllByEmail(string $email): array
+    {
+        return Database::query(
+            'SELECT * FROM instances WHERE email = ?',
+            [$email]
+        )->fetchAll();
+    }
+
+    /**
      * Update instance fields.
      */
     public static function update(int $id, array $data): void
@@ -148,6 +159,8 @@ class Instance
      */
     public static function hardDelete(int $id): void
     {
+        // Delete dependent provision logs first (FK constraint)
+        Database::query('DELETE FROM provision_logs WHERE instance_id = ?', [$id]);
         Database::query('DELETE FROM instances WHERE id = ?', [$id]);
     }
 }
