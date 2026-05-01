@@ -8,7 +8,9 @@ Before filing a bug report, read [testing-feedback.md](testing-feedback.md). Tha
 
 If the PHP process was interrupted during provisioning (server restart, timeout), the instance may be stuck. In the operator dashboard, instances stuck for over 5 minutes show a "Retry" button.
 
-**Manual fix:**
+If the instance was created via public signup, the tenant can also retry by submitting the signup form again with the same email address. Submissions within 5 minutes redirect to the existing status page. After 5 minutes, the stale instance is cleaned up and a fresh provisioning starts automatically.
+
+**Manual fix (operator):**
 1. Check `storage/logs/provision-YYYY-MM-DD.log` for the last step completed
 2. If the subdomain was created but health check failed, check DNS and SSL
 3. Delete the failed instance from the dashboard and re-provision
