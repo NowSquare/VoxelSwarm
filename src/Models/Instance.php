@@ -155,12 +155,28 @@ class Instance
     }
 
     /**
-     * Hard-delete an instance (removes the row entirely).
+     * Hard-delete an instance and all dependent data.
+     *
+     * Runs inside a transaction to ensure atomicity — either everything
+     * is cleaned up or nothing is. Deletes provision_logs (FK constraint)
+     * before the instance row itself.
      */
     public static function hardDelete(int $id): void
     {
-        // Delete dependent provision logs first (FK constraint)
-        Database::query('DELETE FROM provision_logs WHERE instance_id = ?', [$id]);
-        Database::query('DELETE FROM instances WHERE id = ?', [$id]);
+        $db = Database::connection();
+        $db->exec('BEGIN IMMEDIATE');
+
+        try {
+            // Delete dependent provision logs first (FK constraint)
+            Database::query('DELETE FROM provision_logs WHERE instance_id = ?', [$id]);
+
+            // Delete the instance row
+            Database::query('DELETE FROM instances WHERE id = ?', [$id]);
+
+            $db->exec('COMMIT');
+        } catch (\Throwable $e) {
+            $db->exec('ROLLBACK');
+            throw $e;
+        }
     }
 }

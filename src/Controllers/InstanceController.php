@@ -172,7 +172,7 @@ class InstanceController
             Response::json(['error' => 'Instance not found'], 404);
         }
 
-        // Remove subdomain routing
+        // Remove subdomain routing (best-effort — don't block deletion)
         try {
             $adapter = AdapterFactory::create();
             $adapter->removeSubdomain($instance['slug']);
@@ -191,8 +191,23 @@ class InstanceController
             \Swarm\Logger::info('instance', 'Deleted instance directory', ['slug' => $instance['slug']]);
         }
 
-        // Delete the database row
-        Instance::hardDelete((int) $id);
+        // Remove gallery thumbnail if it exists
+        $galleryThumb = SWARM_STORAGE . '/gallery/' . $instance['slug'] . '.jpg';
+        if (file_exists($galleryThumb)) {
+            unlink($galleryThumb);
+        }
+
+        // Delete database records (instance + provision logs, transactional)
+        try {
+            Instance::hardDelete((int) $id);
+            \Swarm\Logger::info('swarm', 'Instance deleted', ['slug' => $instance['slug']]);
+        } catch (\Throwable $e) {
+            \Swarm\Logger::error('swarm', 'Failed to delete instance from database', [
+                'slug'  => $instance['slug'],
+                'error' => $e->getMessage(),
+            ]);
+            Response::json(['error' => 'Failed to remove instance records. Check the logs.'], 500);
+        }
 
         Response::json(['ok' => true]);
     }
