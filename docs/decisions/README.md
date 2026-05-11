@@ -28,3 +28,4 @@ Don't let ADRs drift in `Proposed` indefinitely. A decision nobody disagrees wit
 | # | Title | Status | Date |
 |---|-------|--------|------|
 | [0001](0001-cpanel-subdomain-vs-full-account.md) | cPanel subdomain vs full-account provisioning | Proposed | 2026-05-11 |
+| [0002](0002-content-portability-boundary.md) | Content portability boundary | Proposed | 2026-05-11 |
