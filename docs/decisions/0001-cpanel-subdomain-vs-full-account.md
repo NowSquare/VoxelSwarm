@@ -53,7 +53,7 @@ Estimated changes (would need a spike to confirm the full scope):
 3. **Rewrite removal.** [`CpanelAdapter::removeSubdomain()`](../../src/Adapters/CpanelAdapter.php) (line 35) would call `removeacct`, which recursively deletes the system user, home directory, DNS entries, mail, and databases.
 4. **Username generation.** cPanel usernames are max 16 chars, alphanumeric, system-wide unique. Current slugs may not comply — needs new validation or a mapping layer.
 5. **Credential lifecycle.** `createacct` generates a cPanel login. Unclear whether to store, discard, or expose these. No current infrastructure for per-instance secrets.
-6. **Pause/resume.** [`CpanelAdapter::pauseSubdomain()`](../../src/Adapters/CpanelAdapter.php) (line 42) and `resumeSubdomain()` (line 47) currently log warnings. Full-account mode could use `suspendacct` / `unsuspendacct`, but these also affect email and DNS — may be heavier than intended.
+6. **Pause/resume.** [`CpanelAdapter::pauseSubdomain()`](../../src/Adapters/CpanelAdapter.php) (line 42) and `resumeSubdomain()` now place a `.maintenance` marker file and `.htaccess` redirect in the instance's document root to serve a 503 holding page. Full-account mode could use `suspendacct` / `unsuspendacct` instead, but these also affect email and DNS — may be heavier than intended.
 
 ## Trade-offs
 

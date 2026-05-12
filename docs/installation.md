@@ -10,8 +10,8 @@
   - `zip` — template extraction
   - `curl` — health checks and API calls
 - **Web server:** Nginx (recommended) or Apache with `mod_rewrite`
-- **Wildcard DNS:** `*.yourdomain.com` → your server IP (Nginx adapter only — Forge, cPanel, and Plesk handle DNS automatically)
-- **Wildcard SSL:** for `*.yourdomain.com` (Nginx adapter only — other adapters provision SSL per-subdomain)
+- **Wildcard DNS:** `*.yourdomain.com` → your server IP (required for Nginx and DirectAdmin adapters — Forge, cPanel, and Plesk handle DNS automatically)
+- **Wildcard SSL:** for `*.yourdomain.com` (required for Nginx and DirectAdmin adapters — other adapters provision SSL per-subdomain)
 - **VoxelSite license:** [voxelsite.com/buy](https://voxelsite.com/buy)
 
 No MySQL. No Node.js. No Redis. No Composer on the server.

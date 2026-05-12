@@ -41,7 +41,7 @@ flowchart TD
 
 | Route | Visible When | What the Page Shows |
 |------|--------------|---------------------|
-| `/install` | App is not installed | 3-step setup wizard: system requirements, configuration, install result. The adapter select currently enables `local`, `nginx`, `forge`, `cpanel`, and `plesk`; other adapter entries are shown as coming soon. |
+| `/install` | App is not installed | 3-step setup wizard: system requirements, configuration, install result. The adapter select currently enables `local`, `nginx`, `forge`, `cpanel`, `plesk`, and `directadmin`; other adapter entries are shown as coming soon. |
 | `/` | Installed and `public_site_enabled=true` | Landing page with nav, hero, value props, 4-step explainer, operator pitch, CTA footer. Signup buttons render only when `signups_enabled=true`. |
 | `/` | Installed and `public_site_enabled=false` | Redirects to `/operator/login`. |
 | `/signup` | Installed and `public_site_enabled=true` | Public signup card. When `signups_enabled=true`, shows business name + email form. When `signups_enabled=false`, shows a "Coming soon" state. |
@@ -60,7 +60,7 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 | `/operator/instances` | Authenticated | Search + status filters, total count, instance table, empty states, and `New Instance`. The controller also accepts a `type` query filter, but the current UI does not expose it. |
 | `/operator/instances/{id}` | Authenticated and instance exists | Header with status badge, conditional pause/resume action, delete action, details card, operator notes, and provision log table. |
 | `/operator/templates` | Authenticated | Flash messages, prepared versions list, activate/delete actions, ZIP list, process/delete actions, and first-template empty state. |
-| `/operator/deployment` | Authenticated | Three cards: `Adapter`, `Public Site`, and `Notifications`. Includes `Test Connection` and `Send Test Email`. The current adapter dropdown exposes `local`, `nginx`, `forge`, `cpanel`, and `plesk`. |
+| `/operator/deployment` | Authenticated | Three cards: `Adapter`, `Public Site`, and `Notifications`. Includes `Test Connection` and `Send Test Email`. The current adapter dropdown exposes `local`, `nginx`, `forge`, `cpanel`, `plesk`, and `directadmin`. |
 | `/operator/account` | Authenticated | Operator email form and password change form. |
 | `/operator/system` | Authenticated | `System Status`, `Update`, `Server Logs`, and password-confirmed `Danger Zone` actions for refresh/reset. |
 

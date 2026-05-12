@@ -10,10 +10,13 @@ Like the cPanel adapter, DirectAdmin uses the **subdomain model**: all VoxelSite
 
 ## How It Works
 
-- **createSubdomain:** `POST CMD_API_SUBDOMAINS` with `action=create` — creates `{slug}.{baseDomain}` as a subdomain under the operator's account.
+- **createSubdomain:** `POST CMD_SUBDOMAIN` with `action=create` and `public_html={documentRoot}` — creates `{slug}.{baseDomain}` as a subdomain with a custom document root pointing to the provisioned instance directory. Uses `/CMD_SUBDOMAIN` (not `CMD_API_SUBDOMAINS`) because that is the endpoint that accepts the `public_html` parameter (added in DirectAdmin 1.648).
 - **removeSubdomain:** `POST CMD_API_SUBDOMAINS` with `action=delete` — removes the subdomain. Does not error if the subdomain doesn't exist (idempotent).
-- **pauseSubdomain / resumeSubdomain:** DirectAdmin has no native maintenance mode for subdomains. VoxelSwarm handles pause/resume by swapping the document root to a holding page directory at the application level — same approach as the cPanel adapter.
+- **pauseSubdomain:** Places a `.maintenance` marker file and a `.maintenance_page.php` holding page in the instance's document root, then prepends `.htaccess` rewrite rules that route all traffic to the 503 holding page while the marker exists.
+- **resumeSubdomain:** Removes the `.maintenance` marker, `.maintenance_page.php`, and the `.htaccess` maintenance block — restoring normal traffic.
 - **verify:** `POST CMD_API_SHOW_DOMAINS` — confirms the credentials are valid and the API is reachable.
+
+**Maintenance file contract:** Pause/resume writes and removes files inside the tenant's VoxelSite document root (`.maintenance`, `.maintenance_page.php`, and a fenced block in `.htaccess`). These filenames are reserved by VoxelSwarm and must not be used by VoxelSite itself. The `.htaccess` block is delimited by `# SWARM_MAINTENANCE_START` / `# SWARM_MAINTENANCE_END` markers and is cleanly removed on resume.
 
 ## Required Configuration
 
@@ -33,7 +36,7 @@ Login Keys are DirectAdmin's preferred method for API authentication. They are m
 3. Click **Create Key**
 4. Configure the key:
    - **Key Name:** `voxelswarm` (or any descriptive name)
-   - **Allowed Commands:** Select `CMD_API_SUBDOMAINS` and `CMD_API_SHOW_DOMAINS` (or allow all commands)
+   - **Allowed Commands:** Select `CMD_SUBDOMAIN`, `CMD_API_SUBDOMAINS`, and `CMD_API_SHOW_DOMAINS` (or allow all commands). `CMD_SUBDOMAIN` is required for creating subdomains with custom document roots; `CMD_API_SUBDOMAINS` is used for deletion; `CMD_API_SHOW_DOMAINS` for connection verification.
    - **Allowed IPs:** Restrict to your VoxelSwarm server's IP for security (recommended)
    - **Allow HTM:** Leave unchecked (API-only access)
 5. Save the key and copy the generated value
@@ -58,7 +61,7 @@ DirectAdmin can issue Let's Encrypt certificates for subdomains. Depending on yo
 
 ## Known Limitations
 
-1. **No native pause/resume API.** DirectAdmin doesn't expose a maintenance mode toggle for subdomains. The adapter logs a warning and relies on VoxelSwarm's application-level document root swap.
+1. **No native pause/resume API.** DirectAdmin doesn't expose a maintenance mode toggle for subdomains. The adapter implements pause/resume at the application level using a `.maintenance` marker file and `.htaccess` redirect to a 503 holding page. This works on both Apache and OpenLiteSpeed (the two web servers DirectAdmin supports).
 2. **URL-encoded responses.** DirectAdmin's legacy API returns URL-encoded strings rather than JSON. The adapter handles both formats, but error messages from older DirectAdmin versions may be less descriptive.
 3. **Port is separate from hostname.** Unlike cPanel/WHM (which embeds the port in the hostname URL), DirectAdmin expects the port as a separate config value. The adapter constructs the URL internally.
 

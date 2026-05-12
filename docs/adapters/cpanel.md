@@ -8,9 +8,10 @@ The cPanel adapter uses the [WHM API](https://api.docs.cpanel.net/) to create su
 
 - **createSubdomain:** Creates a subdomain under a cPanel account via WHM API and sets the document root
 - **removeSubdomain:** Removes the subdomain via WHM API
-- **pauseSubdomain / resumeSubdomain:** Currently log warnings only. The adapter does not yet switch the site into a maintenance page.
+- **pauseSubdomain:** Places a `.maintenance` marker file and a `.maintenance_page.php` holding page in the instance's document root, then prepends `.htaccess` rewrite rules that route all traffic to the 503 holding page while the marker exists. cPanel has no native maintenance mode API for subdomains.
+- **resumeSubdomain:** Removes the `.maintenance` marker, `.maintenance_page.php`, and the `.htaccess` maintenance block — restoring normal traffic.
 
-SSL handling depends on your cPanel setup. VoxelSwarm does not trigger AutoSSL directly in the current adapter.
+**Maintenance file contract:** Pause/resume writes and removes files inside the tenant's VoxelSite document root (`.maintenance`, `.maintenance_page.php`, and a fenced block in `.htaccess`). These filenames are reserved by VoxelSwarm and must not be used by VoxelSite itself. The `.htaccess` block is delimited by `# SWARM_MAINTENANCE_START` / `# SWARM_MAINTENANCE_END` markers and is cleanly removed on resume.
 
 ## Prerequisites
 

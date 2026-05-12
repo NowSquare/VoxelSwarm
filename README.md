@@ -61,8 +61,8 @@ By default, VoxelSwarm runs in **operator-only mode** — `GET /` redirects to t
 
 - **PHP 8.2+** with extensions: `pdo_sqlite`, `mbstring`, `openssl`, `fileinfo`, `zip`, `curl`
 - **Web server:** Nginx (recommended) or Apache with `mod_rewrite`
-- **Wildcard DNS:** `*.yourdomain.com → your server IP` (only for Nginx adapter — Forge, cPanel, and Plesk handle this automatically)
-- **Wildcard SSL:** for `*.yourdomain.com` (only for Nginx adapter — other adapters provision SSL per-subdomain)
+- **Wildcard DNS:** `*.yourdomain.com → your server IP` (required for Nginx and DirectAdmin adapters — Forge, cPanel, and Plesk handle this automatically)
+- **Wildcard SSL:** for `*.yourdomain.com` (required for Nginx and DirectAdmin adapters — other adapters provision SSL per-subdomain)
 - **VoxelSite license:** [voxelsite.com/buy](https://voxelsite.com/buy)
 - No MySQL. No Node.js. No Redis. No Composer required — `vendor/` is included in the repo.
 
