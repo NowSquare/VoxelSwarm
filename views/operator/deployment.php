@@ -15,7 +15,7 @@ function sv(array $arr, string $key): string {
 }
 
 $adapter = $s['control_panel_adapter'] ?? 'local';
-$usesDomains = in_array($adapter, ['nginx', 'forge', 'cpanel', 'plesk']);
+$usesDomains = in_array($adapter, ['nginx', 'forge', 'cpanel', 'plesk', 'directadmin']);
 
 $inputClass = "block w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 px-3 py-2 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-shadow";
 $labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5";
@@ -64,6 +64,7 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
           <option value="forge" <?= $adapter === 'forge' ? 'selected' : '' ?>>Laravel Forge</option>
           <option value="cpanel" <?= $adapter === 'cpanel' ? 'selected' : '' ?>>cPanel / WHM</option>
           <option value="plesk" <?= $adapter === 'plesk' ? 'selected' : '' ?>>Plesk</option>
+          <option value="directadmin" <?= $adapter === 'directadmin' ? 'selected' : '' ?>>DirectAdmin</option>
         </select>
       </div>
 
@@ -167,6 +168,39 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
               <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> API Key</span>
             </label>
             <input class="<?= $inputClass ?>" type="password" name="adapter_config[api_key]" placeholder="••••••••••••••••" value="<?= sv($ac, 'api_key') ?>">
+          </div>
+        </div>
+      </div>
+
+      <div id="adapter-directadmin" class="adapter-fields hidden">
+        <div class="bg-zinc-50 dark:bg-zinc-950 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800/50 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> Hostname</span>
+            </label>
+            <input class="<?= $inputClass ?>" type="text" name="adapter_config[da_hostname]" placeholder="your-server.com" value="<?= sv($ac, 'da_hostname') ?>">
+            <p class="<?= $hintClass ?>">Without port. Use the server hostname or IP.</p>
+          </div>
+          <div>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Port</span>
+            </label>
+            <input class="<?= $inputClass ?>" type="number" name="adapter_config[da_port]" placeholder="2222" value="<?= sv($ac, 'da_port') ?: '2222' ?>">
+            <p class="<?= $hintClass ?>">Default: 2222</p>
+          </div>
+          <div>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Username</span>
+            </label>
+            <input class="<?= $inputClass ?>" type="text" name="adapter_config[da_username]" placeholder="admin" value="<?= sv($ac, 'da_username') ?>">
+            <p class="<?= $hintClass ?>">The DirectAdmin account that owns the domain.</p>
+          </div>
+          <div>
+            <label class="<?= $labelClass ?>">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Login Key</span>
+            </label>
+            <input class="<?= $inputClass ?>" type="password" name="adapter_config[da_login_key]" placeholder="••••••••••••••••" value="<?= sv($ac, 'da_login_key') ?>">
+            <p class="<?= $hintClass ?>">Create at User Level → Login Keys in DirectAdmin.</p>
           </div>
         </div>
       </div>
@@ -306,7 +340,7 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
   /* ── Adapter switching ─────────────────────────────────────── */
   function onAdapterChange() {
     const val = document.getElementById('control_panel_adapter').value;
-    const usesDomains = ['nginx', 'forge', 'cpanel', 'plesk'].includes(val);
+    const usesDomains = ['nginx', 'forge', 'cpanel', 'plesk', 'directadmin'].includes(val);
 
     document.querySelectorAll('.adapter-fields').forEach(el => el.classList.add('hidden'));
     const target = document.getElementById('adapter-' + val);

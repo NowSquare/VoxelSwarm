@@ -161,7 +161,7 @@ $pageTitle = 'Install — VoxelSwarm';
             <option value="forge">Laravel Forge (API)</option>
             <option value="cpanel">cPanel / WHM (API)</option>
             <option value="plesk">Plesk (API)</option>
-            <option value="directadmin" disabled>DirectAdmin (coming soon)</option>
+            <option value="directadmin">DirectAdmin (API)</option>
             <option value="cloudpanel" disabled>CloudPanel (coming soon)</option>
             <option value="hestiacp" disabled>HestiaCP (coming soon)</option>
             <option value="cyberpanel" disabled>CyberPanel (coming soon)</option>
@@ -228,6 +228,32 @@ $pageTitle = 'Install — VoxelSwarm';
           <div>
             <label class="install-label">Plesk API Key</label>
             <input type="password" class="install-input" x-model="form.adapter_config.api_key" placeholder="Your Plesk API key">
+          </div>
+        </div>
+
+        <!-- DirectAdmin config fields -->
+        <div x-show="form.adapter === 'directadmin'" x-transition class="space-y-4 p-4 rounded-xl bg-zinc-950 border border-zinc-800">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="install-label">Hostname</label>
+              <input type="text" class="install-input" x-model="form.adapter_config.da_hostname" placeholder="your-server.com">
+              <p class="install-hint">Without port. Hostname or IP address.</p>
+            </div>
+            <div>
+              <label class="install-label">Port</label>
+              <input type="number" class="install-input" x-model="form.adapter_config.da_port" placeholder="2222">
+              <p class="install-hint">Default: 2222</p>
+            </div>
+          </div>
+          <div>
+            <label class="install-label">Username</label>
+            <input type="text" class="install-input" x-model="form.adapter_config.da_username" placeholder="admin">
+            <p class="install-hint">The DirectAdmin account that owns the domain.</p>
+          </div>
+          <div>
+            <label class="install-label">Login Key</label>
+            <input type="password" class="install-input" x-model="form.adapter_config.da_login_key" placeholder="Your DirectAdmin login key">
+            <p class="install-hint">Create at User Level → Login Keys in DirectAdmin.</p>
           </div>
         </div>
 

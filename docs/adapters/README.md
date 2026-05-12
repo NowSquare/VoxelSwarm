@@ -11,7 +11,7 @@ VoxelSwarm uses an adapter system to create hosting accounts and configure your 
 | [Laravel Forge](forge.md) | 🧪 Testing | Forge-managed servers |
 | [cPanel/WHM](cpanel.md) | 🧪 Testing | Shared/reseller hosting with cPanel |
 | [Plesk](plesk.md) | 🧪 Testing | Plesk-managed hosting |
-| [DirectAdmin](directadmin.md) | 📋 Planned | DirectAdmin hosting |
+| [DirectAdmin](directadmin.md) | 🧪 Testing | DirectAdmin hosting |
 | [CloudPanel](cloudpanel.md) | 📋 Planned | CloudPanel hosting |
 | [HestiaCP](hestiacp.md) | 📋 Planned | HestiaCP hosting |
 | [CyberPanel](cyberpanel.md) | 📋 Planned | OpenLiteSpeed with CyberPanel |
