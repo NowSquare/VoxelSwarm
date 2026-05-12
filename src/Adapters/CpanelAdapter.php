@@ -41,12 +41,73 @@ class CpanelAdapter implements ControlPanelAdapter
 
     public function pauseSubdomain(string $slug): void
     {
-        \Swarm\Logger::warning('adapter', 'cPanel pause: implemented via doc root swap', ['slug' => $slug]);
+        // cPanel has no native maintenance mode for subdomains.
+        // We place a .maintenance marker and route traffic to a 503 page
+        // via .htaccess — same mechanism as the DirectAdmin adapter.
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || empty($instance['document_root'])) {
+            \Swarm\Logger::warning('adapter', 'cPanel pause: cannot find document root', ['slug' => $slug]);
+            return;
+        }
+
+        $docRoot = $instance['document_root'];
+        $marker  = $docRoot . '/.maintenance';
+
+        file_put_contents($marker, json_encode([
+            'paused_at' => date('c'),
+            'by'        => 'cpanel_adapter',
+        ]));
+
+        $holdingPage = $docRoot . '/.maintenance_page.php';
+        file_put_contents($holdingPage, $this->maintenancePagePhp());
+
+        $htaccessPath = $docRoot . '/.htaccess';
+        $existing = file_exists($htaccessPath) ? file_get_contents($htaccessPath) : '';
+        if (strpos($existing, '# SWARM_MAINTENANCE_START') === false) {
+            $rule = "# SWARM_MAINTENANCE_START\n"
+                  . "RewriteEngine On\n"
+                  . "RewriteCond %{REQUEST_URI} !^/\.maintenance_page\.php\n"
+                  . "RewriteCond %{DOCUMENT_ROOT}/.maintenance -f\n"
+                  . "RewriteRule ^ .maintenance_page.php [L]\n"
+                  . "# SWARM_MAINTENANCE_END\n";
+            file_put_contents($htaccessPath, $rule . $existing);
+        }
+
+        \Swarm\Logger::info('adapter', 'cPanel subdomain paused via maintenance page', ['slug' => $slug]);
     }
 
     public function resumeSubdomain(string $slug): void
     {
-        \Swarm\Logger::warning('adapter', 'cPanel resume: implemented via doc root swap', ['slug' => $slug]);
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || empty($instance['document_root'])) {
+            \Swarm\Logger::warning('adapter', 'cPanel resume: cannot find document root', ['slug' => $slug]);
+            return;
+        }
+
+        $docRoot = $instance['document_root'];
+
+        $marker = $docRoot . '/.maintenance';
+        if (file_exists($marker)) {
+            unlink($marker);
+        }
+
+        $holdingPage = $docRoot . '/.maintenance_page.php';
+        if (file_exists($holdingPage)) {
+            unlink($holdingPage);
+        }
+
+        $htaccessPath = $docRoot . '/.htaccess';
+        if (file_exists($htaccessPath)) {
+            $content = file_get_contents($htaccessPath);
+            $content = preg_replace(
+                '/# SWARM_MAINTENANCE_START\n.*?# SWARM_MAINTENANCE_END\n/s',
+                '',
+                $content
+            );
+            file_put_contents($htaccessPath, $content);
+        }
+
+        \Swarm\Logger::info('adapter', 'cPanel subdomain resumed', ['slug' => $slug]);
     }
 
     public function verify(): array
@@ -63,7 +124,7 @@ class CpanelAdapter implements ControlPanelAdapter
         }
     }
 
-    private function whmRequest(string $function, array $params = []): array
+    protected function whmRequest(string $function, array $params = []): array
     {
         $query = http_build_query($params);
         $base  = $this->hostname;
@@ -100,5 +161,37 @@ class CpanelAdapter implements ControlPanelAdapter
         ]);
 
         return json_decode($response, true) ?: [];
+    }
+
+    /**
+     * Return inline PHP for a 503 maintenance page.
+     */
+    private function maintenancePagePhp(): string
+    {
+        return <<<'PHP'
+<?php
+http_response_code(503);
+header('Retry-After: 3600');
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Under Maintenance</title>
+<style>
+body{font-family:Inter,system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#09090B;color:#FAFAFA;}
+div{text-align:center}
+h1{font-size:32px;font-weight:700;margin:0}
+p{color:#71717A;margin-top:8px}
+</style>
+</head>
+<body>
+<div>
+<h1>Under Maintenance</h1>
+<p>This site is temporarily paused.</p>
+</div>
+</body>
+</html>
+PHP;
     }
 }

@@ -46,7 +46,7 @@ class Setting
         }
 
         // Decrypt sensitive fields
-        $sensitiveKeys = ['api_key', 'api_token', 'password', 'smtp_password'];
+        $sensitiveKeys = ['api_key', 'api_token', 'password', 'smtp_password', 'da_login_key'];
         foreach ($sensitiveKeys as $sk) {
             if (isset($data[$sk]) && is_string($data[$sk]) && str_starts_with($data[$sk], 'enc:')) {
                 $data[$sk] = Crypt::decrypt(substr($data[$sk], 4));
@@ -73,7 +73,7 @@ class Setting
      */
     public static function setJson(string $key, array $data): void
     {
-        $sensitiveKeys = ['api_key', 'api_token', 'password', 'smtp_password'];
+        $sensitiveKeys = ['api_key', 'api_token', 'password', 'smtp_password', 'da_login_key'];
         foreach ($sensitiveKeys as $sk) {
             if (isset($data[$sk]) && is_string($data[$sk]) && !str_starts_with($data[$sk], 'enc:')) {
                 $data[$sk] = 'enc:' . Crypt::encrypt($data[$sk]);

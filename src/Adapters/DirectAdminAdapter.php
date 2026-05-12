@@ -9,10 +9,11 @@ use Swarm\Models\Setting;
 /**
  * DirectAdminAdapter — Manages subdomains via the DirectAdmin API.
  *
- * Uses the legacy CMD_API_SUBDOMAINS endpoint with Login Key authentication.
- * Creates subdomains under the operator's DirectAdmin account — same
- * isolation model as the cPanel adapter. End users never receive
- * DirectAdmin credentials.
+ * Uses CMD_SUBDOMAIN for create (supports custom document root via the
+ * public_html parameter, added in DA 1.648) and CMD_API_SUBDOMAINS for
+ * delete. Authentication via Login Keys (HTTP Basic). Creates subdomains
+ * under the operator's DirectAdmin account — same isolation model as the
+ * cPanel adapter. End users never receive DirectAdmin credentials.
  *
  * Docs: https://docs.directadmin.com/developer/api/
  */
@@ -35,10 +36,13 @@ class DirectAdminAdapter implements ControlPanelAdapter
 
     public function createSubdomain(string $slug, string $documentRoot): void
     {
-        $response = $this->apiRequest('CMD_API_SUBDOMAINS', [
-            'action'    => 'create',
-            'domain'    => $this->baseDomain,
-            'subdomain' => $slug,
+        // CMD_SUBDOMAIN (not CMD_API_SUBDOMAINS) accepts the public_html
+        // parameter for custom document roots — added in DA 1.648.
+        $response = $this->apiRequest('CMD_SUBDOMAIN', [
+            'action'      => 'create',
+            'domain'      => $this->baseDomain,
+            'subdomain'   => $slug,
+            'public_html' => $documentRoot,
         ]);
 
         // DirectAdmin returns error=0 on success, error=1 on failure.
@@ -94,17 +98,81 @@ class DirectAdminAdapter implements ControlPanelAdapter
 
     public function pauseSubdomain(string $slug): void
     {
-        // DirectAdmin has no native maintenance mode for subdomains.
-        // The Provisioner handles pause by swapping the document root
-        // to a holding page directory — same approach as cPanel.
-        \Swarm\Logger::warning('adapter', 'DirectAdmin pause: no native API, relies on doc root swap', [
+        // DirectAdmin has no native maintenance mode API for subdomains.
+        // We place a .maintenance marker and an index.php that serves a
+        // 503 holding page, blocking access to the real site.
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || empty($instance['document_root'])) {
+            \Swarm\Logger::warning('adapter', 'DirectAdmin pause: cannot find document root', ['slug' => $slug]);
+            return;
+        }
+
+        $docRoot = $instance['document_root'];
+        $marker  = $docRoot . '/.maintenance';
+
+        // Write marker file (presence = paused)
+        file_put_contents($marker, json_encode([
+            'paused_at' => date('c'),
+            'by'        => 'directadmin_adapter',
+        ]));
+
+        // Write a maintenance index.php that short-circuits all requests
+        $holdingPage = $docRoot . '/.maintenance_page.php';
+        file_put_contents($holdingPage, $this->maintenancePagePhp());
+
+        // Prepend .htaccess rule to route all traffic to the holding page
+        $htaccessPath = $docRoot . '/.htaccess';
+        $existing = file_exists($htaccessPath) ? file_get_contents($htaccessPath) : '';
+        if (strpos($existing, '# SWARM_MAINTENANCE_START') === false) {
+            $rule = "# SWARM_MAINTENANCE_START\n"
+                  . "RewriteEngine On\n"
+                  . "RewriteCond %{REQUEST_URI} !^/\.maintenance_page\.php\n"
+                  . "RewriteCond %{DOCUMENT_ROOT}/.maintenance -f\n"
+                  . "RewriteRule ^ .maintenance_page.php [L]\n"
+                  . "# SWARM_MAINTENANCE_END\n";
+            file_put_contents($htaccessPath, $rule . $existing);
+        }
+
+        \Swarm\Logger::info('adapter', 'DirectAdmin subdomain paused via maintenance page', [
             'slug' => $slug,
         ]);
     }
 
     public function resumeSubdomain(string $slug): void
     {
-        \Swarm\Logger::warning('adapter', 'DirectAdmin resume: no native API, relies on doc root swap', [
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || empty($instance['document_root'])) {
+            \Swarm\Logger::warning('adapter', 'DirectAdmin resume: cannot find document root', ['slug' => $slug]);
+            return;
+        }
+
+        $docRoot = $instance['document_root'];
+
+        // Remove the maintenance marker — .htaccess rule becomes a no-op
+        $marker = $docRoot . '/.maintenance';
+        if (file_exists($marker)) {
+            unlink($marker);
+        }
+
+        // Remove the holding page
+        $holdingPage = $docRoot . '/.maintenance_page.php';
+        if (file_exists($holdingPage)) {
+            unlink($holdingPage);
+        }
+
+        // Remove .htaccess maintenance block
+        $htaccessPath = $docRoot . '/.htaccess';
+        if (file_exists($htaccessPath)) {
+            $content = file_get_contents($htaccessPath);
+            $content = preg_replace(
+                '/# SWARM_MAINTENANCE_START\n.*?# SWARM_MAINTENANCE_END\n/s',
+                '',
+                $content
+            );
+            file_put_contents($htaccessPath, $content);
+        }
+
+        \Swarm\Logger::info('adapter', 'DirectAdmin subdomain resumed', [
             'slug' => $slug,
         ]);
     }
@@ -148,7 +216,7 @@ class DirectAdminAdapter implements ControlPanelAdapter
      * Uses HTTP Basic auth with username + login key.
      * Returns the parsed response as an associative array.
      */
-    private function apiRequest(string $command, array $params): array
+    protected function apiRequest(string $command, array $params): array
     {
         $base = $this->hostname;
 
@@ -220,5 +288,39 @@ class DirectAdminAdapter implements ControlPanelAdapter
 
         // URL-encoded response: error=1
         return false;
+    }
+
+    /**
+     * Return inline PHP for a 503 maintenance page.
+     *
+     * Matches the visual style of the Nginx adapter's paused block.
+     */
+    private function maintenancePagePhp(): string
+    {
+        return <<<'PHP'
+<?php
+http_response_code(503);
+header('Retry-After: 3600');
+?><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Under Maintenance</title>
+<style>
+body{font-family:Inter,system-ui,-apple-system,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#09090B;color:#FAFAFA;}
+div{text-align:center}
+h1{font-size:32px;font-weight:700;margin:0}
+p{color:#71717A;margin-top:8px}
+</style>
+</head>
+<body>
+<div>
+<h1>Under Maintenance</h1>
+<p>This site is temporarily paused.</p>
+</div>
+</body>
+</html>
+PHP;
     }
 }
