@@ -16,7 +16,7 @@ $pageTitle = 'Install — VoxelSwarm';
   <title><?= htmlspecialchars($pageTitle) ?></title>
   <link rel="stylesheet" href="/fonts/inter/inter.css">
   <link rel="stylesheet" href="/build/swarm.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="/build/alpine.min.js"></script>
   <style>
     :root { --sw-bg: #09090B; --sw-surface: #18181B; --sw-border: #27272A; --sw-text: #FAFAFA; --sw-text-secondary: #A1A1AA; --sw-accent: #F97316; --sw-accent-hover: #EA580C; }
     body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--sw-bg); color: var(--sw-text); min-height: 100vh; display: flex; flex-direction: column; }

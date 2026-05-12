@@ -117,14 +117,15 @@ echo "\n";
 echo "Step 5: Control Panel Adapter\n";
 echo str_repeat('─', 40) . "\n";
 echo "  Available adapters:\n";
-echo "  0. local  — Filesystem only (custom path, no subdomain management)\n";
-echo "  1. nginx  — Direct Nginx conf management\n";
-echo "  2. forge  — Laravel Forge API\n";
-echo "  3. cpanel — cPanel/WHM API\n";
-echo "  4. plesk  — Plesk API\n";
+echo "  0. local       — Filesystem only (custom path, no subdomain management)\n";
+echo "  1. nginx       — Direct Nginx conf management\n";
+echo "  2. forge       — Laravel Forge API\n";
+echo "  3. cpanel      — cPanel/WHM API\n";
+echo "  4. plesk       — Plesk API\n";
+echo "  5. directadmin — DirectAdmin API\n";
 
-$adapterChoice = prompt('Select adapter (0-4)', '0');
-$adapterMap = ['0' => 'local', '1' => 'nginx', '2' => 'forge', '3' => 'cpanel', '4' => 'plesk'];
+$adapterChoice = prompt('Select adapter (0-5)', '0');
+$adapterMap = ['0' => 'local', '1' => 'nginx', '2' => 'forge', '3' => 'cpanel', '4' => 'plesk', '5' => 'directadmin'];
 $adapter = $adapterMap[$adapterChoice] ?? 'local';
 Setting::set('control_panel_adapter', $adapter);
 
@@ -151,6 +152,12 @@ switch ($adapter) {
     case 'plesk':
         $adapterConfig['hostname'] = prompt('Plesk hostname (https://...)', '');
         $adapterConfig['api_key']  = prompt('Plesk API key', '');
+        break;
+    case 'directadmin':
+        $adapterConfig['da_hostname']  = prompt('DirectAdmin hostname (without port)', '');
+        $adapterConfig['da_port']      = prompt('DirectAdmin port', '2222');
+        $adapterConfig['da_username']  = prompt('DirectAdmin username', 'admin');
+        $adapterConfig['da_login_key'] = prompt('DirectAdmin login key', '');
         break;
 }
 Setting::setJson('adapter_config', $adapterConfig);
