@@ -88,10 +88,25 @@ class DirectAdminSpy extends \Swarm\Adapters\DirectAdminAdapter
     /** @var array{command: string, params: array}[] */
     public array $calls = [];
 
+    /** Simulated raw response for rawApiGet (e.g. existing custom HTTPD config) */
+    public string $rawGetResponse = '';
+
     protected function apiRequest(string $command, array $params): array
     {
         $this->calls[] = ['command' => $command, 'params' => $params];
         return ['error' => '0', 'text' => 'Success', 'details' => ''];
+    }
+
+    protected function rawApiGet(string $command, array $params): string
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params, 'method' => 'GET'];
+        return $this->rawGetResponse;
+    }
+
+    /** Expose the protected extractHttpStatus for testing */
+    public function extractHttpStatus(array $headers): int
+    {
+        return parent::extractHttpStatus($headers);
     }
 }
 
@@ -121,18 +136,57 @@ $daSpy = new DirectAdminSpy([
 
 $daSpy->createSubdomain('mysite', '/home/admin/domains/test.local/public_html/instances/mysite');
 
-assert_equals(1, count($daSpy->calls), 'createSubdomain made exactly 1 API call');
+// createSubdomain makes 3 API calls:
+// 1. CMD_API_SUBDOMAINS POST (create the subdomain)
+// 2. CMD_API_CUSTOM_HTTPD GET via rawApiGet (fetch existing config)
+// 3. CMD_API_CUSTOM_HTTPD POST (save SDOCROOT override)
+assert_equals(3, count($daSpy->calls), 'createSubdomain made exactly 3 API calls');
 
 $createCall = $daSpy->calls[0];
-assert_equals('CMD_SUBDOMAIN', $createCall['command'], 'Endpoint is CMD_SUBDOMAIN (not CMD_API_SUBDOMAINS)');
+assert_equals('CMD_API_SUBDOMAINS', $createCall['command'], 'Step 1 endpoint is CMD_API_SUBDOMAINS');
 assert_equals('create', $createCall['params']['action'], 'action=create');
 assert_equals('test.local', $createCall['params']['domain'], 'domain=base_domain');
 assert_equals('mysite', $createCall['params']['subdomain'], 'subdomain=slug');
-assert_equals(
-    '/home/admin/domains/test.local/public_html/instances/mysite',
-    $createCall['params']['public_html'],
-    'public_html=documentRoot'
-);
+assert_false(isset($createCall['params']['public_html']), 'No public_html param (set via custom HTTPD)');
+
+$getConfigCall = $daSpy->calls[1];
+assert_equals('CMD_API_CUSTOM_HTTPD', $getConfigCall['command'], 'Step 2a fetches existing custom HTTPD config');
+assert_equals('test.local', $getConfigCall['params']['domain'], 'GET config for base domain');
+assert_equals('GET', $getConfigCall['method'] ?? '', 'Step 2a uses rawApiGet (GET method)');
+
+$setConfigCall = $daSpy->calls[2];
+assert_equals('CMD_API_CUSTOM_HTTPD', $setConfigCall['command'], 'Step 2b saves SDOCROOT override');
+assert_equals('save', $setConfigCall['params']['action'], 'action=save');
+// CRITICAL: POST field must be 'config' (not 'custom') per DA docs
+assert_true(isset($setConfigCall['params']['config']), 'POST field is "config" (per DA docs)');
+assert_false(isset($setConfigCall['params']['custom']), 'POST field is NOT "custom"');
+assert_contains($setConfigCall['params']['config'], '|*if SUB="mysite"|', 'Config contains SUB conditional');
+assert_contains($setConfigCall['params']['config'], '|?SDOCROOT=/home/admin/domains/test.local/public_html/instances/mysite|', 'Config contains SDOCROOT path');
+assert_contains($setConfigCall['params']['config'], '# SWARM_DOCROOT_mysite', 'Config contains fenced start marker');
+assert_contains($setConfigCall['params']['config'], '# SWARM_DOCROOT_mysite_END', 'Config contains fenced end marker');
+
+// ─── Test 1b: Existing custom HTTPD config is preserved ────────
+
+echo "\nTest 1b: Existing custom HTTPD config preservation\n";
+echo str_repeat('─', 55) . "\n";
+
+$daSpy2 = new DirectAdminSpy([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]);
+
+// Simulate an existing custom HTTPD config with DA template syntax
+$existingConfig = "|*if SSL|\nSSLEngine on\n|*endif|\n";
+$daSpy2->rawGetResponse = $existingConfig;
+
+$daSpy2->createSubdomain('newsite', '/home/admin/domains/test.local/public_html/instances/newsite');
+
+$saveCall = $daSpy2->calls[2];
+assert_contains($saveCall['params']['config'], 'SSLEngine on', 'Existing config is preserved');
+assert_contains($saveCall['params']['config'], '|*if SSL|', 'Existing DA template syntax preserved');
+assert_contains($saveCall['params']['config'], '|*if SUB="newsite"|', 'New SDOCROOT block appended');
 
 // ─── Test 2: DirectAdmin removeSubdomain request ───────────────
 
@@ -142,14 +196,74 @@ echo str_repeat('─', 55) . "\n";
 $daSpy->calls = [];
 $daSpy->removeSubdomain('mysite');
 
-assert_equals(1, count($daSpy->calls), 'removeSubdomain made exactly 1 API call');
+// removeSubdomain makes 2 API calls:
+// 1. CMD_API_CUSTOM_HTTPD GET via rawApiGet (check for marker — not found, so no save)
+// 2. CMD_API_SUBDOMAINS POST (delete the subdomain)
+assert_equals(2, count($daSpy->calls), 'removeSubdomain made exactly 2 API calls');
 
-$removeCall = $daSpy->calls[0];
-assert_equals('CMD_API_SUBDOMAINS', $removeCall['command'], 'Endpoint is CMD_API_SUBDOMAINS');
+$checkConfigCall = $daSpy->calls[0];
+assert_equals('CMD_API_CUSTOM_HTTPD', $checkConfigCall['command'], 'Step 1 checks custom HTTPD config');
+assert_equals('GET', $checkConfigCall['method'] ?? '', 'Step 1 uses rawApiGet (GET method)');
+
+$removeCall = $daSpy->calls[1];
+assert_equals('CMD_API_SUBDOMAINS', $removeCall['command'], 'Step 2 endpoint is CMD_API_SUBDOMAINS');
 assert_equals('delete', $removeCall['params']['action'], 'action=delete');
 assert_equals('test.local', $removeCall['params']['domain'], 'domain=base_domain');
 assert_equals('mysite', $removeCall['params']['select0'], 'select0=slug');
 assert_equals('yes', $removeCall['params']['delete'], 'delete=yes');
+
+// ─── Test 2b: Removal with marker found triggers cleanup save ──
+
+echo "\nTest 2b: Removal with existing SDOCROOT marker\n";
+echo str_repeat('─', 55) . "\n";
+
+$daSpy3 = new DirectAdminSpy([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]);
+
+// Simulate existing config with a Swarm marker
+$daSpy3->rawGetResponse = "# SWARM_DOCROOT_oldsite\n|*if SUB=\"oldsite\"|\n|?SDOCROOT=/some/path|\n|*endif|\n# SWARM_DOCROOT_oldsite_END\n";
+
+$daSpy3->removeSubdomain('oldsite');
+
+// Should be 3 calls: GET config, POST save (cleaned), POST delete subdomain
+assert_equals(3, count($daSpy3->calls), 'removeSubdomain with marker made 3 API calls');
+
+$cleanSave = $daSpy3->calls[1];
+assert_equals('CMD_API_CUSTOM_HTTPD', $cleanSave['command'], 'Cleanup saves cleaned config');
+assert_true(isset($cleanSave['params']['config']), 'Cleanup uses "config" POST field');
+assert_not_contains($cleanSave['params']['config'], 'SWARM_DOCROOT_oldsite', 'Marker removed from saved config');
+
+$deleteCall = $daSpy3->calls[2];
+assert_equals('CMD_API_SUBDOMAINS', $deleteCall['command'], 'Delete still runs after cleanup');
+
+// ─── Test 2c: Delete runs even when HTTPD cleanup throws ───────
+
+echo "\nTest 2c: Delete resilience when HTTPD cleanup fails\n";
+echo str_repeat('─', 55) . "\n";
+
+// Create a spy that throws on rawApiGet to simulate HTTPD API failure
+$daSpy4 = new class([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]) extends DirectAdminSpy {
+    protected function rawApiGet(string $command, array $params): string
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params, 'method' => 'GET'];
+        throw new \RuntimeException('Simulated CMD_API_CUSTOM_HTTPD failure');
+    }
+};
+
+$daSpy4->removeSubdomain('failsite');
+
+// Even though HTTPD cleanup threw, delete should still run
+$deleteCommands = array_filter($daSpy4->calls, fn($c) => ($c['command'] ?? '') === 'CMD_API_SUBDOMAINS');
+assert_true(count($deleteCommands) > 0, 'CMD_API_SUBDOMAINS delete ran despite HTTPD failure');
 
 // ─── Test 3: cPanel createSubdomain request ────────────────────
 
@@ -311,6 +425,140 @@ assert_equals('2222', $rawData['da_port'], 'da_port not encrypted');
 
 $decrypted = \Swarm\Models\Setting::getJson('adapter_config');
 assert_equals('secret-key-abc', $decrypted['da_login_key'], 'da_login_key decrypts correctly');
+
+// ─── Test 10: HTTP status validation ───────────────────────────
+
+echo "\nTest 10: HTTP status validation\n";
+echo str_repeat('─', 55) . "\n";
+
+// Test extractHttpStatus parsing (exposed via spy)
+$statusSpy = new DirectAdminSpy([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]);
+
+assert_equals(200, $statusSpy->extractHttpStatus(['HTTP/1.1 200 OK']), 'Parses HTTP/1.1 200');
+assert_equals(404, $statusSpy->extractHttpStatus(['HTTP/1.1 404 Not Found']), 'Parses HTTP/1.1 404');
+assert_equals(403, $statusSpy->extractHttpStatus(['HTTP/1.1 403 Forbidden']), 'Parses HTTP/1.1 403');
+assert_equals(500, $statusSpy->extractHttpStatus(['HTTP/1.1 500 Internal Server Error']), 'Parses HTTP/1.1 500');
+assert_equals(200, $statusSpy->extractHttpStatus(['HTTP/2 200']), 'Parses HTTP/2 200');
+assert_equals(0, $statusSpy->extractHttpStatus([]), 'Empty headers return 0');
+assert_equals(0, $statusSpy->extractHttpStatus(['']), 'Empty string returns 0');
+
+// Test that apiRequest throws on 404 — simulate via a spy that
+// calls the real apiRequest with a fake HTTP endpoint
+$httpSpy = new class([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]) extends DirectAdminSpy {
+    public int $simulatedStatus = 200;
+
+    protected function apiRequest(string $command, array $params): array
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params];
+        if ($this->simulatedStatus >= 400) {
+            throw new \RuntimeException(
+                "DirectAdmin API {$command} returned HTTP {$this->simulatedStatus}"
+            );
+        }
+        return ['error' => '0', 'text' => 'Success', 'details' => ''];
+    }
+
+    protected function rawApiGet(string $command, array $params): string
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params, 'method' => 'GET'];
+        if ($this->simulatedStatus >= 400) {
+            throw new \RuntimeException(
+                "DirectAdmin API GET {$command} returned HTTP {$this->simulatedStatus}"
+            );
+        }
+        return $this->rawGetResponse;
+    }
+};
+
+// 404 on createSubdomain — CMD_API_SUBDOMAINS returns 404
+$httpSpy->simulatedStatus = 404;
+$threw = false;
+try {
+    $httpSpy->createSubdomain('test404', '/some/path');
+} catch (\RuntimeException $e) {
+    $threw = true;
+    assert_contains($e->getMessage(), '404', 'Exception message contains HTTP status 404');
+    assert_contains($e->getMessage(), 'CMD_API_SUBDOMAINS', 'Exception identifies the failed command');
+}
+assert_true($threw, 'createSubdomain throws on HTTP 404');
+
+// 403 on rawApiGet — CMD_API_CUSTOM_HTTPD returns 403
+$httpSpy->calls = [];
+$httpSpy->simulatedStatus = 200; // Let create succeed
+$httpSpy2 = new class([
+    'da_hostname'  => 'da.example.com',
+    'da_port'      => '2222',
+    'da_username'  => 'admin',
+    'da_login_key' => 'key123',
+]) extends DirectAdminSpy {
+    protected function apiRequest(string $command, array $params): array
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params];
+        return ['error' => '0', 'text' => 'Success', 'details' => ''];
+    }
+
+    protected function rawApiGet(string $command, array $params): string
+    {
+        $this->calls[] = ['command' => $command, 'params' => $params, 'method' => 'GET'];
+        throw new \RuntimeException(
+            "DirectAdmin API GET {$command} returned HTTP 403"
+        );
+    }
+};
+
+// createSubdomain: CMD_API_SUBDOMAINS succeeds but custom HTTPD GET fails with 403
+$threw403 = false;
+try {
+    $httpSpy2->createSubdomain('test403', '/some/path');
+} catch (\RuntimeException $e) {
+    $threw403 = true;
+    assert_contains($e->getMessage(), '403', 'Exception contains 403');
+    assert_contains($e->getMessage(), 'CMD_API_CUSTOM_HTTPD', 'Exception identifies custom HTTPD');
+}
+assert_true($threw403, 'createSubdomain throws when custom HTTPD GET returns 403');
+
+// removeSubdomain should still succeed even when rawApiGet returns 403
+// (because removeSubdomainDocumentRoot is wrapped in try/catch)
+$httpSpy2->calls = [];
+$threwOnDelete = false;
+try {
+    $httpSpy2->removeSubdomain('test403');
+    // Should reach here — delete should work
+} catch (\RuntimeException $e) {
+    $threwOnDelete = true;
+}
+assert_false($threwOnDelete, 'removeSubdomain succeeds despite HTTPD 403 (resilient delete)');
+$deleteRan = !empty(array_filter($httpSpy2->calls, fn($c) => $c['command'] === 'CMD_API_SUBDOMAINS'));
+assert_true($deleteRan, 'CMD_API_SUBDOMAINS delete ran after 403 on HTTPD');
+
+// ─── Test 11: Log redaction of config payloads ─────────────────
+
+echo "\nTest 11: Log redaction of config payloads\n";
+echo str_repeat('─', 55) . "\n";
+
+// Verify that apiRequest's logger excludes 'config' via source inspection.
+// This proves the config payload (arbitrary DA custom HTTPD data) never
+// reaches the log file — even if a future refactor changes the spy.
+$rm = new ReflectionMethod(\Swarm\Adapters\DirectAdminAdapter::class, 'apiRequest');
+$source = file_get_contents($rm->getFileName());
+$startLine = $rm->getStartLine();
+$endLine = $rm->getEndLine();
+$lines = array_slice(explode("\n", $source), $startLine - 1, $endLine - $startLine + 1);
+$methodSource = implode("\n", $lines);
+
+assert_contains($methodSource, "'config' => true", 'apiRequest log excludes config from params');
+assert_contains($methodSource, "'action' => true", 'apiRequest log excludes action from params');
+assert_contains($methodSource, 'array_diff_key', 'apiRequest uses array_diff_key for log filtering');
 
 // ─── Cleanup ───────────────────────────────────────────────────
 

@@ -9,11 +9,14 @@ use Swarm\Models\Setting;
 /**
  * DirectAdminAdapter — Manages subdomains via the DirectAdmin API.
  *
- * Uses CMD_SUBDOMAIN for create (supports custom document root via the
- * public_html parameter, added in DA 1.648) and CMD_API_SUBDOMAINS for
- * delete. Authentication via Login Keys (HTTP Basic). Creates subdomains
- * under the operator's DirectAdmin account — same isolation model as the
- * cPanel adapter. End users never receive DirectAdmin credentials.
+ * Creates subdomains via CMD_API_SUBDOMAINS (Login Key compatible), then
+ * sets a custom document root via CMD_API_CUSTOM_HTTPD using the SDOCROOT
+ * token. CMD_SUBDOMAIN (which accepts public_html natively) is a browser-
+ * session endpoint and returns 404 with Login Key authentication.
+ *
+ * Authentication via Login Keys (HTTP Basic). Creates subdomains under the
+ * operator's DirectAdmin account — same isolation model as the cPanel
+ * adapter. End users never receive DirectAdmin credentials.
  *
  * Docs: https://docs.directadmin.com/developer/api/
  */
@@ -36,17 +39,15 @@ class DirectAdminAdapter implements ControlPanelAdapter
 
     public function createSubdomain(string $slug, string $documentRoot): void
     {
-        // CMD_SUBDOMAIN (not CMD_API_SUBDOMAINS) accepts the public_html
-        // parameter for custom document roots — added in DA 1.648.
-        $response = $this->apiRequest('CMD_SUBDOMAIN', [
-            'action'      => 'create',
-            'domain'      => $this->baseDomain,
-            'subdomain'   => $slug,
-            'public_html' => $documentRoot,
+        // Step 1: Create the subdomain via CMD_API_SUBDOMAINS.
+        // This is the Login Key–compatible endpoint. It creates the
+        // subdomain with the default document root.
+        $response = $this->apiRequest('CMD_API_SUBDOMAINS', [
+            'action'    => 'create',
+            'domain'    => $this->baseDomain,
+            'subdomain' => $slug,
         ]);
 
-        // DirectAdmin returns error=0 on success, error=1 on failure.
-        // If the subdomain already exists, treat as success (idempotent).
         if ($this->hasError($response)) {
             $text = $response['text'] ?? $response['details'] ?? 'Unknown error';
 
@@ -55,20 +56,36 @@ class DirectAdminAdapter implements ControlPanelAdapter
                 \Swarm\Logger::info('adapter', 'DirectAdmin subdomain already exists (idempotent)', [
                     'slug' => $slug,
                 ]);
-                return;
+            } else {
+                throw new \RuntimeException("DirectAdmin create subdomain failed: {$text}");
             }
-
-            throw new \RuntimeException("DirectAdmin create subdomain failed: {$text}");
         }
 
         \Swarm\Logger::info('adapter', 'DirectAdmin subdomain created', [
             'slug'      => $slug,
             'subdomain' => "{$slug}.{$this->baseDomain}",
         ]);
+
+        // Step 2: Set the custom document root via CMD_API_CUSTOM_HTTPD.
+        // DirectAdmin's CMD_API_SUBDOMAINS does not accept a custom
+        // document root. We override it using the SDOCROOT token in the
+        // domain's custom HTTPD configuration.
+        $this->setSubdomainDocumentRoot($slug, $documentRoot);
     }
 
     public function removeSubdomain(string $slug): void
     {
+        // Best-effort cleanup of custom HTTPD config — must not block
+        // the subdomain deletion itself.
+        try {
+            $this->removeSubdomainDocumentRoot($slug);
+        } catch (\Throwable $e) {
+            \Swarm\Logger::warning('adapter', 'DirectAdmin custom HTTPD cleanup failed (continuing with delete)', [
+                'slug'  => $slug,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         $response = $this->apiRequest('CMD_API_SUBDOMAINS', [
             'action'  => 'delete',
             'domain'  => $this->baseDomain,
@@ -211,6 +228,110 @@ class DirectAdminAdapter implements ControlPanelAdapter
     // ─── Private ────────────────────────────────────────────────
 
     /**
+     * Set a custom document root for a subdomain via Custom HTTPD Config.
+     *
+     * Uses CMD_API_CUSTOM_HTTPD to inject an SDOCROOT override for the
+     * specific subdomain. This is the only Login Key–compatible way to
+     * set a non-default document root in DirectAdmin.
+     *
+     * The config uses DA template syntax:
+     *   |*if SUB="slug"|
+     *   |?SDOCROOT=/path/to/document/root|
+     *   |*endif|
+     */
+    private function setSubdomainDocumentRoot(string $slug, string $documentRoot): void
+    {
+        // Fetch existing custom HTTPD config to avoid overwriting it
+        $existing = $this->getCustomHttpdConfig();
+
+        // Build the SDOCROOT block for this subdomain
+        $marker = "# SWARM_DOCROOT_{$slug}";
+        $block  = "{$marker}\n"
+                . "|*if SUB=\"{$slug}\"|\n"
+                . "|?SDOCROOT={$documentRoot}|\n"
+                . "|*endif|\n"
+                . "{$marker}_END\n";
+
+        // If we already wrote a block for this slug, replace it
+        if (str_contains($existing, $marker)) {
+            $existing = preg_replace(
+                '/' . preg_quote($marker, '/') . '\n.*?' . preg_quote("{$marker}_END", '/') . '\n/s',
+                '',
+                $existing
+            );
+        }
+
+        $config = trim($existing) . "\n" . $block;
+
+        // POST field is 'config' per DA docs (version 1.26.0+).
+        $response = $this->apiRequest('CMD_API_CUSTOM_HTTPD', [
+            'domain' => $this->baseDomain,
+            'action' => 'save',
+            'save'   => 'yes',
+            'config' => $config,
+        ]);
+
+        if ($this->hasError($response)) {
+            $text = $response['text'] ?? $response['details'] ?? 'Unknown error';
+            throw new \RuntimeException(
+                "DirectAdmin set document root failed for {$slug}: {$text}"
+            );
+        }
+
+        \Swarm\Logger::info('adapter', 'DirectAdmin document root set via custom HTTPD', [
+            'slug'         => $slug,
+            'document_root' => $documentRoot,
+        ]);
+    }
+
+    /**
+     * Remove the custom HTTPD document root override for a subdomain.
+     */
+    private function removeSubdomainDocumentRoot(string $slug): void
+    {
+        $existing = $this->getCustomHttpdConfig();
+        $marker   = "# SWARM_DOCROOT_{$slug}";
+
+        if (!str_contains($existing, $marker)) {
+            return; // Nothing to remove
+        }
+
+        $config = preg_replace(
+            '/' . preg_quote($marker, '/') . '\n.*?' . preg_quote("{$marker}_END", '/') . '\n/s',
+            '',
+            $existing
+        );
+
+        $response = $this->apiRequest('CMD_API_CUSTOM_HTTPD', [
+            'domain' => $this->baseDomain,
+            'action' => 'save',
+            'save'   => 'yes',
+            'config' => trim($config) . "\n",
+        ]);
+
+        if ($this->hasError($response)) {
+            \Swarm\Logger::warning('adapter', 'DirectAdmin remove custom HTTPD failed (non-fatal)', [
+                'slug'  => $slug,
+                'error' => $response['text'] ?? 'unknown',
+            ]);
+        }
+    }
+
+    /**
+     * Fetch the existing custom HTTPD config for the base domain.
+     *
+     * CMD_API_CUSTOM_HTTPD GET dumps the raw .cust_httpd file body
+     * as plain text. Using apiRequest() would parse_str() it, mangling
+     * DA template syntax (pipes, equals). We use rawApiGet() instead.
+     */
+    private function getCustomHttpdConfig(): string
+    {
+        return $this->rawApiGet('CMD_API_CUSTOM_HTTPD', [
+            'domain' => $this->baseDomain,
+        ]);
+    }
+
+    /**
      * Make a request to the DirectAdmin API.
      *
      * Uses HTTP Basic auth with username + login key.
@@ -261,8 +382,17 @@ class DirectAdminAdapter implements ControlPanelAdapter
 
         \Swarm\Logger::info('adapter', "DirectAdmin API: {$command}", [
             'status' => $http_response_header[0] ?? 'unknown',
-            'params' => array_diff_key($params, ['action' => true]),
+            'params' => array_diff_key($params, ['action' => true, 'config' => true]),
         ]);
+
+        // Validate HTTP status — a 404/403 body must not be parsed as
+        // a valid API response.
+        $httpStatus = $this->extractHttpStatus($http_response_header ?? []);
+        if ($httpStatus >= 400) {
+            throw new \RuntimeException(
+                "DirectAdmin API {$command} returned HTTP {$httpStatus}"
+            );
+        }
 
         // DirectAdmin returns URL-encoded responses by default.
         // Try JSON first (modern DA versions), fall back to URL-encoded.
@@ -274,6 +404,87 @@ class DirectAdminAdapter implements ControlPanelAdapter
         // Parse URL-encoded response: error=0&text=...&details=...
         parse_str($response, $parsed);
         return $parsed;
+    }
+
+    /**
+     * Make a GET request to the DirectAdmin API and return the raw body.
+     *
+     * Some DA endpoints (like CMD_API_CUSTOM_HTTPD GET) dump raw file
+     * data that would be mangled by parse_str(). This method returns
+     * the response as-is.
+     */
+    protected function rawApiGet(string $command, array $params): string
+    {
+        $base = $this->hostname;
+
+        if (!preg_match('#^https?://#i', $base)) {
+            $base = 'https://' . $base;
+        }
+
+        $port = parse_url($base, PHP_URL_PORT);
+        if ($port === null) {
+            $base .= ':' . $this->port;
+        }
+
+        $query = http_build_query($params);
+        $url   = "{$base}/{$command}?{$query}";
+        $auth  = base64_encode("{$this->username}:{$this->loginKey}");
+
+        $context = stream_context_create([
+            'http' => [
+                'method'        => 'GET',
+                'header'        => "Authorization: Basic {$auth}\r\n",
+                'timeout'       => 30,
+                'ignore_errors' => true,
+            ],
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false,
+            ],
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+
+        if ($response === false) {
+            throw new \RuntimeException(
+                "DirectAdmin API GET failed: could not connect to {$base}/{$command}"
+            );
+        }
+
+        \Swarm\Logger::info('adapter', "DirectAdmin API GET: {$command}", [
+            'status' => $http_response_header[0] ?? 'unknown',
+        ]);
+
+        // Validate HTTP status — a 404/403 body (HTML error page) must
+        // not be returned as raw config text.
+        $httpStatus = $this->extractHttpStatus($http_response_header ?? []);
+        if ($httpStatus >= 400) {
+            throw new \RuntimeException(
+                "DirectAdmin API GET {$command} returned HTTP {$httpStatus}"
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Extract the HTTP status code from the $http_response_header array.
+     *
+     * PHP's file_get_contents() populates $http_response_header with
+     * the raw response headers. The first line is e.g. "HTTP/1.1 200 OK".
+     */
+    protected function extractHttpStatus(array $headers): int
+    {
+        if (empty($headers[0])) {
+            return 0;
+        }
+
+        // Match "HTTP/1.1 404 Not Found" or "HTTP/2 200"
+        if (preg_match('#HTTP/\S+\s+(\d{3})#', $headers[0], $m)) {
+            return (int) $m[1];
+        }
+
+        return 0;
     }
 
     /**
