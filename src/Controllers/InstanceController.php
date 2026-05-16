@@ -99,13 +99,22 @@ class InstanceController
             'type'   => 'instance',
         ]);
 
-        // Provision in background
+        // Send response, then provision in background
+        http_response_code(200);
+        header('Content-Type: application/json');
+        echo json_encode(['id' => $instanceId, 'slug' => $slug]);
+
         if (function_exists('fastcgi_finish_request')) {
-            Response::json(['id' => $instanceId, 'slug' => $slug]);
             fastcgi_finish_request();
         } else {
             ignore_user_abort(true);
-            Response::json(['id' => $instanceId, 'slug' => $slug]);
+            header('Content-Length: 0');
+            header('Connection: close');
+            flush();
+            if (function_exists('ob_end_flush')) {
+                @ob_end_flush();
+            }
+            flush();
         }
 
         Provisioner::run($instanceId);

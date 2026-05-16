@@ -15,6 +15,12 @@ If the instance was created via public signup, the tenant can also retry by subm
 2. If the subdomain was created but health check failed, check DNS and SSL
 3. Delete the failed instance from the dashboard and re-provision
 
+### Instance stuck in "queued" status with no provision log
+
+If an instance stays "queued" after creation from the operator dashboard and the provision log is empty (no steps recorded), provisioning never started. This was a bug in versions prior to 0.4.1 where the JSON response terminated the PHP process before the provisioner could run.
+
+**Fix:** Update to VoxelSwarm 0.4.1 or later. Delete the queued instance and create a new one.
+
 ### Health check fails after subdomain creation
 
 The health checker makes an HTTP GET to `https://{slug}.{base_domain}/_studio/install.php` — it needs:
