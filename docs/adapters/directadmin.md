@@ -10,8 +10,8 @@ Like the cPanel adapter, DirectAdmin uses the **subdomain model**: all VoxelSite
 
 ## How It Works
 
-- **createSubdomain:** Two-step process. First, `POST CMD_API_SUBDOMAINS` with `action=create` creates the subdomain `{slug}.{baseDomain}`. Then, `POST CMD_API_CUSTOM_HTTPD` injects an `SDOCROOT` override to point the subdomain at the provisioned instance directory. (`CMD_SUBDOMAIN` accepts `public_html` natively but is a browser-session endpoint — it returns 404 with Login Key authentication.)
-- **removeSubdomain:** Removes the `SDOCROOT` custom HTTPD override, then `POST CMD_API_SUBDOMAINS` with `action=delete` removes the subdomain. Does not error if the subdomain doesn't exist (idempotent).
+- **createSubdomain:** `POST CMD_API_SUBDOMAINS` with `action=create` creates the subdomain `{slug}.{baseDomain}`. DirectAdmin creates a default subdomain directory at `/home/{user}/domains/{domain}/public_html/{slug}/`. The adapter then moves the provisioned VoxelSite files from `storage/instances/{slug}` into that DA directory and updates the instance's `document_root` in the database.
+- **removeSubdomain:** `POST CMD_API_SUBDOMAINS` with `action=delete` removes the subdomain. Does not error if the subdomain doesn't exist (idempotent). DA handles its own directory cleanup.
 - **pauseSubdomain:** Places a `.maintenance` marker file and a `.maintenance_page.php` holding page in the instance's document root, then prepends `.htaccess` rewrite rules that route all traffic to the 503 holding page while the marker exists.
 - **resumeSubdomain:** Removes the `.maintenance` marker, `.maintenance_page.php`, and the `.htaccess` maintenance block — restoring normal traffic.
 - **verify:** `POST CMD_API_SHOW_DOMAINS` — confirms the credentials are valid and the API is reachable.
@@ -26,6 +26,7 @@ Like the cPanel adapter, DirectAdmin uses the **subdomain model**: all VoxelSite
 | Port | `da_port` | DirectAdmin API port (default: `2222`) |
 | Username | `da_username` | DirectAdmin admin or reseller username that owns the domain |
 | Login Key | `da_login_key` | Login Key for API authentication (not the account password) |
+| Docroot Base | `da_docroot_base` | *(Optional)* Override the base path for subdomain directories. Default: `/home/{da_username}/domains/{base_domain}/public_html` |
 
 ## Setting Up Login Keys
 
@@ -36,7 +37,7 @@ Login Keys are DirectAdmin's preferred method for API authentication. They are m
 3. Click **Create Key**
 4. Configure the key:
    - **Key Name:** `voxelswarm` (or any descriptive name)
-   - **Allowed Commands:** Select `CMD_API_SUBDOMAINS`, `CMD_API_CUSTOM_HTTPD`, and `CMD_API_SHOW_DOMAINS` (or allow all commands). `CMD_API_SUBDOMAINS` is used for subdomain creation and deletion; `CMD_API_CUSTOM_HTTPD` sets the custom document root via the `SDOCROOT` token; `CMD_API_SHOW_DOMAINS` for connection verification.
+   - **Allowed Commands:** Select `CMD_API_SUBDOMAINS` and `CMD_API_SHOW_DOMAINS` (or allow all commands). `CMD_API_SUBDOMAINS` is used for subdomain creation and deletion; `CMD_API_SHOW_DOMAINS` for connection verification.
    - **Allowed IPs:** Restrict to your VoxelSwarm server's IP for security (recommended)
    - **Allow HTM:** Leave unchecked (API-only access)
 5. Save the key and copy the generated value
@@ -62,9 +63,20 @@ DirectAdmin can issue Let's Encrypt certificates for subdomains. Depending on yo
 ## Known Limitations
 
 1. **No native pause/resume API.** DirectAdmin doesn't expose a maintenance mode toggle for subdomains. The adapter implements pause/resume at the application level using a `.maintenance` marker file and `.htaccess` redirect to a 503 holding page. This works on both Apache and OpenLiteSpeed (the two web servers DirectAdmin supports).
-2. **Two-step document root.** DirectAdmin's `CMD_SUBDOMAIN` endpoint accepts a `public_html` parameter for custom document roots, but it is a browser-session endpoint — it returns 404 when called via Login Key authentication. The adapter works around this by creating the subdomain via `CMD_API_SUBDOMAINS` and then setting the document root via `CMD_API_CUSTOM_HTTPD` with the `SDOCROOT` token.
+2. **Files are moved, not symlinked.** DirectAdmin's permission model prevents setting custom document roots via `CMD_API_CUSTOM_HTTPD` (requires admin-level access that conflicts with user-level domain ownership). Instead, the adapter moves provisioned files into the subdomain directory that DA creates. This means VoxelSite files live in DA's directory tree rather than `storage/instances/`.
 3. **URL-encoded responses.** DirectAdmin's legacy API returns URL-encoded strings rather than JSON. The adapter handles both formats, but error messages from older DirectAdmin versions may be less descriptive.
 4. **Port is separate from hostname.** Unlike cPanel/WHM (which embeds the port in the hostname URL), DirectAdmin expects the port as a separate config value. The adapter constructs the URL internally.
+
+## Why Not CMD_API_CUSTOM_HTTPD?
+
+DirectAdmin's `CMD_API_CUSTOM_HTTPD` endpoint can set custom document roots using the `SDOCROOT` token. However, field testing revealed it is unusable for VoxelSwarm's operator model:
+
+- `CMD_API_CUSTOM_HTTPD` requires **admin-level** access
+- Subdomain creation via `CMD_API_SUBDOMAINS` requires **user-level** domain ownership
+- A single Login Key cannot satisfy both requirements
+- Even admin-level Login Keys with `user=` parameter passthrough are blocked from writing custom HTTPD configs
+
+The file-move approach works reliably across all DA permission setups that support `CMD_API_SUBDOMAINS`.
 
 ## Troubleshooting
 
@@ -78,11 +90,12 @@ DirectAdmin can issue Let's Encrypt certificates for subdomains. Depending on yo
 - Regenerate the Login Key and paste the full value (no trailing spaces)
 - If using IP restrictions on the key, verify your VoxelSwarm server's outbound IP matches
 
-**"Set document root failed" error:**
-- Ensure the Login Key has `CMD_API_CUSTOM_HTTPD` permission — this is required for setting the custom document root via the `SDOCROOT` token
-- If the Login Key was created before updating to VoxelSwarm 0.4.2, re-create it with the updated permissions: `CMD_API_SUBDOMAINS`, `CMD_API_CUSTOM_HTTPD`, `CMD_API_SHOW_DOMAINS`
-
 **Subdomain not resolving after creation:**
 - Verify the wildcard DNS record exists: `dig *.yourdomain.com`
 - DirectAdmin may need a few seconds to write the Apache/Nginx vhost — the health check retry handles this
 - Check DirectAdmin's error log at `/var/log/directadmin/error.log`
+
+**Files not appearing at subdomain:**
+- Check that `da_docroot_base` matches where DA creates subdomain directories on your server
+- Default path is `/home/{da_username}/domains/{base_domain}/public_html/{slug}`
+- Verify directory permissions allow the web server to read the moved files
