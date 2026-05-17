@@ -15,6 +15,8 @@ Like the cPanel adapter, DirectAdmin uses the **subdomain model**: all VoxelSite
 - **pauseSubdomain:** Places a `.maintenance` marker file and a `.maintenance_page.php` holding page in the instance's document root, then prepends `.htaccess` rewrite rules that route all traffic to the 503 holding page while the marker exists.
 - **resumeSubdomain:** Removes the `.maintenance` marker, `.maintenance_page.php`, and the `.htaccess` maintenance block — restoring normal traffic.
 - **verify:** `POST CMD_API_SHOW_DOMAINS` — confirms the credentials are valid and the API is reachable.
+- **addDomain:** `POST CMD_API_DOMAIN_POINTER` with `action=add` — creates a domain pointer from the custom domain to `{slug}.{baseDomain}` (the instance's subdomain), routing traffic to the correct tenant.
+- **removeDomain:** `POST CMD_API_DOMAIN_POINTER` with `action=delete` on the instance's subdomain. Idempotent — "does not exist" errors are silently suppressed.
 
 **Maintenance file contract:** Pause/resume writes and removes files inside the tenant's VoxelSite document root (`.maintenance`, `.maintenance_page.php`, and a fenced block in `.htaccess`). These filenames are reserved by VoxelSwarm and must not be used by VoxelSite itself. The `.htaccess` block is delimited by `# SWARM_MAINTENANCE_START` / `# SWARM_MAINTENANCE_END` markers and is cleanly removed on resume.
 
@@ -37,7 +39,7 @@ Login Keys are DirectAdmin's preferred method for API authentication. They are m
 3. Click **Create Key**
 4. Configure the key:
    - **Key Name:** `voxelswarm` (or any descriptive name)
-   - **Allowed Commands:** Select `CMD_API_SUBDOMAINS` and `CMD_API_SHOW_DOMAINS` (or allow all commands). `CMD_API_SUBDOMAINS` is used for subdomain creation and deletion; `CMD_API_SHOW_DOMAINS` for connection verification.
+   - **Allowed Commands:** Select `CMD_API_SUBDOMAINS`, `CMD_API_SHOW_DOMAINS`, and `CMD_API_DOMAIN_POINTER` (or allow all commands). `CMD_API_SUBDOMAINS` is used for subdomain creation and deletion; `CMD_API_SHOW_DOMAINS` for connection verification; `CMD_API_DOMAIN_POINTER` for custom domain management.
    - **Allowed IPs:** Restrict to your VoxelSwarm server's IP for security (recommended)
    - **Allow HTM:** Leave unchecked (API-only access)
 5. Save the key and copy the generated value

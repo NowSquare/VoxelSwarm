@@ -42,6 +42,18 @@ interface ControlPanelAdapter
      * @return array{ok: bool, message: string}
      */
     public function verify(): array;
+
+    /**
+     * Add a custom domain pointing to an existing instance's document root.
+     * Must be idempotent — safe to call if domain already exists.
+     */
+    public function addDomain(string $slug, string $domain): void;
+
+    /**
+     * Remove a custom domain from an instance.
+     * Must be idempotent — safe to call if domain doesn't exist.
+     */
+    public function removeDomain(string $slug, string $domain): void;
 }
 ```
 
@@ -123,6 +135,28 @@ class YourPanelAdapter implements ControlPanelAdapter
         // Your panel's API implementation
         // Log all API calls to the adapter channel
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        $subdomain = "{$slug}.{$this->baseDomain}";
+
+        // Call your panel's API to add a domain alias/pointer
+        $this->apiRequest('POST', "/api/domains/{$subdomain}/aliases", [
+            'domain' => $domain,
+        ]);
+
+        Logger::info('adapter', "Added domain alias {$domain}", [
+            'adapter' => 'yourpanel',
+            'slug' => $slug,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        // Call your panel's API to remove the domain alias/pointer
+        // Must be idempotent: no error if alias doesn't exist
+        $this->apiRequest('DELETE', "/api/domains/aliases/{$domain}");
+    }
 }
 ```
 
@@ -173,11 +207,12 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md) for PR guidelines.
 
 ## Important Rules
 
-1. **Idempotent methods** — `createSubdomain()` must be safe to call if the subdomain already exists. `removeSubdomain()` must not error if it doesn't exist.
+1. **Idempotent methods** — `createSubdomain()` must be safe to call if the subdomain already exists. `removeSubdomain()` must not error if it doesn't exist. Same for `addDomain()` and `removeDomain()`.
 2. **Log everything** — Use `Logger::info('adapter', ...)` for all API calls. Operators need visibility.
 3. **Never throw generic exceptions** — Use descriptive error messages that help the operator debug.
-4. **No shell commands if avoidable** — Prefer API calls over CLI tools. If you must use shell commands, use Symfony Process with explicit command arrays.
-5. **Keep config minimal** — Only require what's strictly necessary. Derive the rest from `base_domain` and other settings.
+4. **Validate API responses** — Check HTTP status codes and response body for errors. Do not assume success after a non-failing network call.
+5. **No shell commands if avoidable** — Prefer API calls over CLI tools. If you must use shell commands, use Symfony Process with explicit command arrays.
+6. **Keep config minimal** — Only require what's strictly necessary. Derive the rest from `base_domain` and other settings.
 
 ## Reference Implementations
 

@@ -70,7 +70,7 @@ By default, VoxelSwarm runs in **operator-only mode** — `GET /` redirects to t
 
 ## Control Panel Adapters
 
-VoxelSwarm uses an adapter system to create hosting accounts and configure your control panel. Each adapter implements the same interface:
+VoxelSwarm uses an adapter system to create hosting accounts and configure your control panel. Each adapter implements the same interface for subdomain provisioning, custom domain management, and maintenance mode:
 
 | Adapter | Status | Configuration |
 |---------|--------|---------------|
@@ -97,7 +97,7 @@ VoxelSwarm/
 │   ├── Adapters/                # Control panel adapter system
 │   ├── Controllers/             # Route handlers
 │   ├── Models/                  # SQLite data access
-│   ├── Services/                # Provisioner, mailer, health checker
+│   ├── Services/                # Provisioner, mailer, health checker, DNS verifier
 │   ├── Middleware/               # Auth, CSRF, throttle
 │   └── Helpers/                 # Encryption, validation, response
 ├── views/                       # PHP templates

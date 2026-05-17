@@ -9,6 +9,8 @@ The Forge adapter uses the [Laravel Forge API](https://forge.laravel.com/api-doc
 - **createSubdomain:** Creates a new site via Forge API with the subdomain and document root
 - **removeSubdomain:** Deletes the site via Forge API
 - **pauseSubdomain / resumeSubdomain:** Currently log warnings only. The operator UI still shows the buttons, but the Forge adapter does not yet toggle site availability.
+- **addDomain:** Adds a domain alias to the Forge site via REST API. HTTP status is validated — 4xx/5xx responses propagate as exceptions with the Forge error message.
+- **removeDomain:** Finds and removes the alias by domain name via Forge API. Idempotent — no error if the site or alias doesn't exist.
 
 SSL is handled automatically by Forge via Let's Encrypt.
 

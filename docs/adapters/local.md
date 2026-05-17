@@ -10,8 +10,9 @@ The Filesystem adapter deploys instances directly to a folder on disk. No subdom
 - **removeSubdomain:** Logs the removal (directory cleanup is handled by the provisioner)
 - **pauseSubdomain / resumeSubdomain:** Logs the action (no web server changes)
 - **verify:** Checks that the configured instances root path exists and is writable
+- **addDomain / removeDomain:** Logs the action only. No web server changes — custom domain routing must be handled manually.
 
-The adapter focuses on filesystem operations only. If you need automatic subdomain routing, use the Nginx, Forge, cPanel, or Plesk adapter instead.
+The adapter focuses on filesystem operations only. If you need automatic subdomain routing, use the Nginx, Forge, cPanel, Plesk, or DirectAdmin adapter instead.
 
 ## Configuration
 

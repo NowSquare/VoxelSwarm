@@ -19,12 +19,13 @@ For a route-by-route map of where each setting is used, see [page-map.md](page-m
 | `max_instances` | `/operator/deployment` | Maximum total instances allowed for public signup flow | `100` |
 | `public_site_enabled` | `/operator/deployment` | Whether `/` renders the landing page instead of redirecting to operator login | `false` |
 | `signups_enabled` | `/operator/deployment` | Whether the public signup form is active | `false` |
-| `control_panel_adapter` | `/operator/deployment` | Active adapter: `local`, `nginx`, `forge`, `cpanel`, `plesk` | Adapter chosen during install |
+| `control_panel_adapter` | `/operator/deployment` | Active adapter: `local`, `nginx`, `forge`, `cpanel`, `plesk`, `directadmin` | Adapter chosen during install |
 | `adapter_config` | `/operator/deployment` | JSON payload for adapter-specific config | Empty or install input |
 | `mail_driver` | `/operator/deployment` | `smtp`, `log`, or `null` | `log` unless changed during install |
 | `mail_config` | `/operator/deployment` | JSON payload for SMTP settings | Empty unless SMTP was configured |
 | `operator_email` | `/operator/account` | Address used for failure notifications and test mail | Value entered during install |
 | `operator_password_hash` | `/operator/account` | bcrypt hash used for operator login | Generated during install |
+| `server_ip` | `/operator/deployment` | Public server IP address for custom domain DNS verification. Comma-separated for IPv4 + IPv6. | Empty |
 
 ### System-Managed Settings
 

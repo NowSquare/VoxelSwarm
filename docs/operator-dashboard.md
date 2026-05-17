@@ -109,7 +109,7 @@ What you see:
 
 Table columns:
 
-- `Identifier`
+- `Identifier` (shows custom domain as primary label when set, with slug below)
 - `Name`
 - `Email`
 - `Status`
@@ -158,6 +158,24 @@ Rows shown in the card:
 - `Type`
 - `Created`
 - `Provisioned`
+
+### Custom Domain
+
+Shown only when the instance is active or paused. Allows attaching a fully qualified domain (e.g., `bakery-anna.com`) to the instance.
+
+States:
+
+- **No domain set:** Input field with "Verify & Add" button. Help text shows the server IP and required A record. If no server IP is configured, a warning links to Deployment settings.
+- **DNS pending:** Amber panel showing the required DNS record. "Re-check DNS" button. "Force add" bypass for Cloudflare-proxied domains.
+- **Domain active, SSL pending:** Domain as clickable link with "VERIFIED" badge and amber "SSL PENDING" badge. "Re-check SSL" button. "Remove" button.
+- **Domain active, SSL active:** Domain as clickable link with "VERIFIED" and green "SSL" badges. "Remove" button.
+
+Behavior details:
+
+- The controller rejects `setDomain()` when a domain is already attached. The operator must remove the current domain first, which triggers adapter cleanup before a new one can be added.
+- Explicit domain removal requires confirmed adapter cleanup. If the adapter fails, the domain stays tracked and the operator sees an error with instructions to retry or resolve manually. This is distinct from instance deletion, which uses best-effort cleanup.
+- SSL verification uses a real TLS handshake with `verify_peer=true` and checks that the certificate CN/SAN matches the domain. Self-signed or wrong certificates are not marked as active.
+- DNS verification checks A/AAAA records against the `server_ip` setting. Force-add bypasses DNS checks for domains behind proxies like Cloudflare.
 
 ### Notes
 
@@ -251,6 +269,7 @@ The currently exposed adapter choices are:
 - `Laravel Forge`
 - `cPanel / WHM`
 - `Plesk`
+- `DirectAdmin`
 
 The fields below the dropdown change by adapter.
 
@@ -262,6 +281,8 @@ Shows:
 - `Instance Limit`
 
 No `Base Domain` field is shown in the current local-adapter Deployment UI.
+
+All domain-based adapters also show a `Server IP` field below `Instance Limit` — the public IP address used for custom domain DNS verification. Comma-separate for IPv4 + IPv6.
 
 #### Nginx
 

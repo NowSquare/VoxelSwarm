@@ -9,6 +9,8 @@ The Plesk adapter uses the [Plesk REST API](https://docs.plesk.com/en-US/obsidia
 - **createSubdomain:** Creates a subdomain under the operator's Plesk subscription via REST API
 - **removeSubdomain:** Removes the subdomain via REST API
 - **pauseSubdomain / resumeSubdomain:** Currently log warnings only. The adapter does not yet toggle maintenance mode remotely.
+- **addDomain:** Creates a domain alias under the subscription's subdomain via Plesk REST API. HTTP status is validated — 4xx/5xx responses propagate as exceptions.
+- **removeDomain:** Removes the alias via Plesk REST API. Idempotent — "not found" errors are silently ignored.
 
 SSL is handled via Plesk's built-in Let's Encrypt integration.
 

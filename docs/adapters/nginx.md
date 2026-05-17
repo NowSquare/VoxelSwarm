@@ -2,7 +2,7 @@
 
 **Status:** ✅ Working
 
-The Nginx adapter manages subdomain routing by writing per-instance server blocks to the Nginx configuration directory.
+The Nginx adapter manages subdomain routing by writing per-instance server blocks to the Nginx configuration directory. It also supports custom domain management with per-domain SSL.
 
 ## How It Works
 
@@ -10,6 +10,8 @@ The Nginx adapter manages subdomain routing by writing per-instance server block
 - **removeSubdomain:** Deletes the conf file and reloads Nginx
 - **pauseSubdomain:** Replaces the conf file with one that returns `503` with a holding page
 - **resumeSubdomain:** Restores the original conf file and reloads
+- **addDomain:** Writes a domain-specific server block to `/etc/nginx/conf.d/domain-{slug}.conf`, reloads Nginx, then runs Certbot to obtain a per-domain SSL certificate. On Certbot success, rewrites the domain block with the Let's Encrypt cert paths and reloads again.
+- **removeDomain:** Deletes the domain conf file and reloads Nginx
 
 ## Prerequisites
 

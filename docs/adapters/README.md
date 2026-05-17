@@ -18,7 +18,7 @@ VoxelSwarm uses an adapter system to create hosting accounts and configure your 
 
 ## How Adapters Work
 
-Every adapter must implement five methods:
+Every adapter must implement seven methods:
 
 ```php
 interface ControlPanelAdapter
@@ -28,10 +28,12 @@ interface ControlPanelAdapter
     public function pauseSubdomain(string $slug): void;
     public function resumeSubdomain(string $slug): void;
     public function verify(): array; // ['ok' => bool, 'message' => string]
+    public function addDomain(string $slug, string $domain): void;
+    public function removeDomain(string $slug, string $domain): void;
 }
 ```
 
-The provisioner calls these methods during the instance lifecycle. It never knows which panel is running underneath — the adapter handles all panel-specific logic.
+The provisioner calls these methods during the instance lifecycle. It never knows which panel is running underneath — the adapter handles all panel-specific logic. The `addDomain`/`removeDomain` methods are called when an operator attaches or detaches a custom domain from an active instance.
 
 ## Choosing an Adapter
 

@@ -58,9 +58,9 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 |------|--------------|---------------------|
 | `/operator` | Authenticated | Two modes. With zero instances: onboarding cards for template prep, deployment config, and first instance creation. Otherwise: summary cards, recent activity table, and `New Instance`. |
 | `/operator/instances` | Authenticated | Search + status filters, total count, instance table, empty states, and `New Instance`. The controller also accepts a `type` query filter, but the current UI does not expose it. |
-| `/operator/instances/{id}` | Authenticated and instance exists | Header with status badge, conditional pause/resume action, delete action, details card, operator notes, and provision log table. |
+| `/operator/instances/{id}` | Authenticated and instance exists | Header with status badge, conditional pause/resume action, delete action, details card, custom domain management, operator notes, and provision log table. |
 | `/operator/templates` | Authenticated | Flash messages, prepared versions list, activate/delete actions, ZIP list, process/delete actions, and first-template empty state. |
-| `/operator/deployment` | Authenticated | Three cards: `Adapter`, `Public Site`, and `Notifications`. Includes `Test Connection` and `Send Test Email`. The current adapter dropdown exposes `local`, `nginx`, `forge`, `cpanel`, `plesk`, and `directadmin`. |
+| `/operator/deployment` | Authenticated | Three cards: `Adapter`, `Public Site`, and `Notifications`. Includes `Test Connection` and `Send Test Email`. The current adapter dropdown exposes `local`, `nginx`, `forge`, `cpanel`, `plesk`, and `directadmin`. Adapter section includes `Server IP` for custom domain DNS verification. |
 | `/operator/account` | Authenticated | Operator email form and password change form. |
 | `/operator/system` | Authenticated | `System Status`, `Update`, `Server Logs`, and password-confirmed `Danger Zone` actions for refresh/reset. |
 
@@ -74,6 +74,9 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 | Status page | Poll success | Reveals workspace CTA to `/_studio/`. |
 | Dashboard or Instances | `New Instance` | Opens shared modal; successful submit redirects to `/operator/instances/{id}`. |
 | Instance detail | `Pause` / `Resume` / `Delete` | Calls instance actions, then reloads or redirects to the list. |
+| Instance detail | `Verify & Add` (domain) | Validates DNS, calls adapter `addDomain()`, checks SSL, reloads page. |
+| Instance detail | `Remove` (domain) | Calls adapter `removeDomain()`, clears DB fields, reloads page. |
+| Instance detail | `Re-check SSL` | Performs real TLS handshake against the domain to verify certificate. |
 | Templates | `Process`, `Activate`, `Delete` | Redirect-back flows with flash message. |
 | Deployment | Save | Persists adapter/public-site/mail settings and flashes success. |
 | System | `Pull Latest`, log delete/download, refresh, reset | Executes maintenance flows and shows toast/status feedback. |
@@ -86,6 +89,7 @@ All `/operator/*` pages below require a valid operator session, except `/operato
 | `signups_enabled` | Install defaults + `/operator/deployment` | Whether landing page CTAs point to signup and whether `/signup` shows the form or a "Coming soon" state. |
 | `base_domain` | Install + `/operator/deployment` | Instance subdomain generation, status CTA URL, and landing copy examples. |
 | `max_instances` | `/operator/deployment` | Blocks new public signups once the total instance count reaches the configured limit. |
+| `server_ip` | `/operator/deployment` | Server IP for custom domain DNS verification. Used by `DnsVerifier::getServerIps()` and shown in the Instance Detail domain UI. |
 | `control_panel_adapter` | Install + `/operator/deployment` | Which adapter provisions instances and whether the new-instance modal is subdomain-based or path-based. |
 | `adapter_config` | Install + `/operator/deployment` | Adapter-specific credentials and filesystem/server config. |
 | `mail_driver` | Install + `/operator/deployment` | Whether welcome/failure/test mail is sent, logged, or skipped. |
