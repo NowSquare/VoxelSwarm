@@ -76,8 +76,13 @@ $pageTitle = 'Instances — VoxelSwarm';
         <tbody class="divide-y divide-zinc-100 dark:divide-zinc-800/80">
           <?php foreach ($instances as $inst): ?>
             <tr class="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors cursor-pointer group" onclick="location.href='/operator/instances/<?= $inst['id'] ?>'">
-              <td class="px-5 py-3 font-semibold text-orange-600 dark:text-orange-500 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
-                <?= htmlspecialchars($inst['slug']) ?>
+              <td class="px-5 py-3">
+                <?php if (!empty($inst['custom_domain'])): ?>
+                  <span class="font-semibold text-orange-600 dark:text-orange-500 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors"><?= htmlspecialchars($inst['custom_domain']) ?></span>
+                  <span class="block text-[11px] text-zinc-400 dark:text-zinc-500 font-mono mt-0.5"><?= htmlspecialchars($inst['slug']) ?></span>
+                <?php else: ?>
+                  <span class="font-semibold text-orange-600 dark:text-orange-500 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors"><?= htmlspecialchars($inst['slug']) ?></span>
+                <?php endif; ?>
               </td>
               <td class="px-5 py-3 font-medium text-zinc-900 dark:text-white">
                 <?= htmlspecialchars($inst['name']) ?>

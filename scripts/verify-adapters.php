@@ -462,6 +462,374 @@ try {
 }
 assert_true($threw403, 'removeSubdomain throws on HTTP 403');
 
+// ─── Test 11: DirectAdmin addDomain via CMD_API_DOMAIN_POINTER ──
+
+echo "\nTest 11: DirectAdmin addDomain request construction\n";
+echo str_repeat('─', 55) . "\n";
+
+$daSpy->calls = [];
+$daSpy->addDomain('mysite', 'bakery-anna.com');
+
+assert_equals(1, count($daSpy->calls), 'addDomain makes exactly 1 API call');
+
+$addCall = $daSpy->calls[0];
+assert_equals('CMD_API_DOMAIN_POINTER', $addCall['command'], 'Endpoint is CMD_API_DOMAIN_POINTER');
+assert_equals('add', $addCall['params']['action'], 'action=add');
+assert_equals('mysite.test.local', $addCall['params']['domain'], 'domain=slug.base_domain (targets subdomain)');
+assert_equals('bakery-anna.com', $addCall['params']['from'], 'from=custom_domain');
+
+// ─── Test 12: DirectAdmin removeDomain ─────────────────────────
+
+echo "\nTest 12: DirectAdmin removeDomain request construction\n";
+echo str_repeat('─', 55) . "\n";
+
+$daSpy->calls = [];
+$daSpy->removeDomain('mysite', 'bakery-anna.com');
+
+assert_equals(1, count($daSpy->calls), 'removeDomain makes exactly 1 API call');
+
+$removeCall = $daSpy->calls[0];
+assert_equals('CMD_API_DOMAIN_POINTER', $removeCall['command'], 'Endpoint is CMD_API_DOMAIN_POINTER');
+assert_equals('delete', $removeCall['params']['action'], 'action=delete');
+assert_equals('mysite.test.local', $removeCall['params']['domain'], 'domain=slug.base_domain (targets subdomain)');
+assert_equals('bakery-anna.com', $removeCall['params']['select0'], 'select0=custom_domain');
+
+// ─── Test 13: cPanel addDomain request ─────────────────────────
+
+echo "\nTest 13: cPanel addDomain request construction\n";
+echo str_repeat('─', 55) . "\n";
+
+// Create a document root for the cPanel addDomain test
+$cpDomainDir = $testTmpBase . '/instance-cp-domain';
+mkdir($cpDomainDir, 0755, true);
+file_put_contents($cpDomainDir . '/index.php', '<?php echo "VoxelSite";');
+
+\Swarm\Models\Instance::create([
+    'slug'          => 'cp-domain-test',
+    'name'          => 'cPanel Domain Test',
+    'email'         => 'test@test.local',
+    'status'        => 'active',
+    'type'          => 'instance',
+    'document_root' => $cpDomainDir,
+]);
+
+$cpSpy->calls = [];
+$cpSpy->addDomain('cp-domain-test', 'shop.example.com');
+
+// Should make 2 calls: adddomain + start_autossl_check_for_one_user
+assert_true(count($cpSpy->calls) >= 1, 'addDomain makes at least 1 WHM call');
+
+$cpAddCall = $cpSpy->calls[0];
+assert_equals('adddomain', $cpAddCall['function'], 'WHM function is adddomain');
+assert_equals('shop.example.com', $cpAddCall['params']['domain'], 'domain=custom_domain');
+assert_equals($cpDomainDir, $cpAddCall['params']['dir'], 'dir=document_root');
+
+// ─── Test 14: LocalAdapter addDomain is a no-op ───────────────
+
+echo "\nTest 14: LocalAdapter domain methods (no-op)\n";
+echo str_repeat('─', 55) . "\n";
+
+$localAdapter = new \Swarm\Adapters\LocalAdapter([]);
+
+try {
+    $localAdapter->addDomain('test-slug', 'custom.test');
+    assert_true(true, 'LocalAdapter addDomain does not throw');
+} catch (\Throwable $e) {
+    assert_true(false, 'LocalAdapter addDomain should not throw: ' . $e->getMessage());
+}
+
+try {
+    $localAdapter->removeDomain('test-slug', 'custom.test');
+    assert_true(true, 'LocalAdapter removeDomain does not throw');
+} catch (\Throwable $e) {
+    assert_true(false, 'LocalAdapter removeDomain should not throw: ' . $e->getMessage());
+}
+
+// ─── Test 15: DnsVerifier static analysis ──────────────────────
+
+echo "\nTest 15: DnsVerifier validation\n";
+echo str_repeat('─', 55) . "\n";
+
+// Empty IPs should return false
+assert_false(\Swarm\Services\DnsVerifier::verify('example.com', []), 'Empty expectedIps returns false');
+
+// Non-existent domain should return false
+assert_false(
+    \Swarm\Services\DnsVerifier::verify('this-domain-definitely-does-not-exist-12345.test', ['1.2.3.4']),
+    'Non-existent domain returns false'
+);
+
+// ─── Test 16: Schema migration columns exist ───────────────────
+
+echo "\nTest 16: Schema migration columns\n";
+echo str_repeat('─', 55) . "\n";
+
+$cols = \Swarm\Database::query('PRAGMA table_info(instances)')->fetchAll();
+$colNames = array_column($cols, 'name');
+
+assert_true(in_array('custom_domain', $colNames), 'custom_domain column exists');
+assert_true(in_array('domain_verified_at', $colNames), 'domain_verified_at column exists');
+assert_true(in_array('domain_ssl_at', $colNames), 'domain_ssl_at column exists');
+
+// ─── Test 17: custom_domain UNIQUE constraint ──────────────────
+
+echo "\nTest 17: custom_domain uniqueness\n";
+echo str_repeat('─', 55) . "\n";
+
+$uniqueId1 = \Swarm\Models\Instance::create([
+    'slug'          => 'unique-test-1',
+    'name'          => 'Unique Test 1',
+    'email'         => 'test@test.local',
+    'status'        => 'active',
+    'type'          => 'instance',
+    'document_root' => '/tmp/test1',
+]);
+\Swarm\Models\Instance::update($uniqueId1, ['custom_domain' => 'unique-test.com']);
+
+$uniqueId2 = \Swarm\Models\Instance::create([
+    'slug'          => 'unique-test-2',
+    'name'          => 'Unique Test 2',
+    'email'         => 'test@test.local',
+    'status'        => 'active',
+    'type'          => 'instance',
+    'document_root' => '/tmp/test2',
+]);
+
+$violationThrown = false;
+try {
+    \Swarm\Models\Instance::update($uniqueId2, ['custom_domain' => 'unique-test.com']);
+} catch (\Throwable $e) {
+    $violationThrown = true;
+    assert_contains($e->getMessage(), 'UNIQUE', 'UNIQUE constraint violation detected');
+}
+assert_true($violationThrown, 'Duplicate custom_domain throws UNIQUE constraint error');
+
+// ─── Test 18: domainMatchesCert wildcard matching ──────────────
+
+echo "\nTest 18: domainMatchesCert wildcard / exact matching\n";
+echo str_repeat('─', 55) . "\n";
+
+// Use reflection to test the private static method
+$refMethod = new \ReflectionMethod(\Swarm\Controllers\InstanceController::class, 'domainMatchesCert');
+$refMethod->setAccessible(true);
+
+// Exact match
+assert_true(
+    $refMethod->invoke(null, 'example.com', 'example.com'),
+    'Exact CN match: example.com = example.com'
+);
+
+// Case-insensitive exact match
+assert_true(
+    $refMethod->invoke(null, 'Example.COM', 'example.com'),
+    'Case-insensitive exact match'
+);
+
+// Wildcard match: *.example.com should match foo.example.com
+assert_true(
+    $refMethod->invoke(null, 'foo.example.com', '*.example.com'),
+    'Wildcard: foo.example.com matches *.example.com'
+);
+
+// Wildcard match: *.example.com should match bar.example.com
+assert_true(
+    $refMethod->invoke(null, 'bar.example.com', '*.example.com'),
+    'Wildcard: bar.example.com matches *.example.com'
+);
+
+// Wildcard should NOT match the bare domain itself
+assert_false(
+    $refMethod->invoke(null, 'example.com', '*.example.com'),
+    'Wildcard: example.com does NOT match *.example.com'
+);
+
+// Wildcard should NOT match sub-subdomains
+assert_false(
+    $refMethod->invoke(null, 'a.b.example.com', '*.example.com'),
+    'Wildcard: a.b.example.com does NOT match *.example.com'
+);
+
+// Wrong domain entirely
+assert_false(
+    $refMethod->invoke(null, 'foo.other.com', '*.example.com'),
+    'Wildcard: foo.other.com does NOT match *.example.com'
+);
+
+// Wrong domain, exact mismatch
+assert_false(
+    $refMethod->invoke(null, 'example.com', 'other.com'),
+    'Exact mismatch: example.com ≠ other.com'
+);
+
+// Bare TLD should not match wildcard
+assert_false(
+    $refMethod->invoke(null, 'com', '*.com'),
+    'Bare TLD: com does NOT match *.com (no dot in domain)'
+);
+
+// ─── Test 19: cPanel removeDomain idempotent for "not found" ───
+
+echo "\nTest 19: cPanel removeDomain idempotency\n";
+echo str_repeat('─', 55) . "\n";
+
+// Simulate a "not found" WHM error by making the spy throw
+$cpSpyForIdempotent = new class(['hostname' => 'https://test.local:2087', 'whm_username' => 'root', 'api_token' => 'test']) extends \Swarm\Adapters\CpanelAdapter {
+    public bool $throwNotFound = false;
+    public bool $throwRealError = false;
+
+    protected function whmRequest(string $function, array $params = []): array
+    {
+        if ($this->throwNotFound) {
+            throw new \RuntimeException("WHM API removedomainbyname failed: The domain does not exist");
+        }
+        if ($this->throwRealError) {
+            throw new \RuntimeException("WHM API removedomainbyname returned HTTP 500");
+        }
+        return ['result' => [['status' => 1]]];
+    }
+};
+
+// "not found" should not throw
+$cpSpyForIdempotent->throwNotFound = true;
+try {
+    $cpSpyForIdempotent->removeDomain('test', 'missing.example.com');
+    assert_true(true, 'removeDomain suppresses "does not exist" error');
+} catch (\Throwable $e) {
+    assert_true(false, 'removeDomain should NOT throw on "does not exist": ' . $e->getMessage());
+}
+
+// ─── Test 20: cPanel removeDomain propagates real errors ───────
+
+echo "\nTest 20: cPanel removeDomain propagates real errors\n";
+echo str_repeat('─', 55) . "\n";
+
+$cpSpyForIdempotent->throwNotFound = false;
+$cpSpyForIdempotent->throwRealError = true;
+
+$realErrorThrown = false;
+try {
+    $cpSpyForIdempotent->removeDomain('test', 'broken.example.com');
+} catch (\RuntimeException $e) {
+    $realErrorThrown = true;
+    assert_contains($e->getMessage(), 'HTTP 500', 'Real error message preserved');
+}
+assert_true($realErrorThrown, 'removeDomain propagates real (non-idempotent) errors');
+
+// ─── Test 21: Controller removeDomain preserves DB on adapter failure ──
+
+echo "\nTest 21: Controller removeDomain preserves DB on adapter failure\n";
+echo str_repeat('─', 55) . "\n";
+
+// Build a failing adapter that throws on removeDomain
+$failingAdapter = new class([]) implements \Swarm\Adapters\ControlPanelAdapter {
+    public function createSubdomain(string $slug, string $documentRoot): void {}
+    public function removeSubdomain(string $slug): void {}
+    public function pauseSubdomain(string $slug): void {}
+    public function resumeSubdomain(string $slug): void {}
+    public function verify(): array { return ['ok' => true, 'message' => 'test']; }
+    public function addDomain(string $slug, string $domain): void {}
+    public function removeDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException("Connection refused: panel unreachable");
+    }
+};
+
+// Create a test instance with a custom domain attached
+$now = date('c');
+$removeDomainTestSlug = 'remove-fail-test-' . substr(md5((string) time()), 0, 6);
+$removeDomainTestId = \Swarm\Models\Instance::create([
+    'slug'          => $removeDomainTestSlug,
+    'name'          => 'Removal Fail Test',
+    'email'         => 'test@test.local',
+    'status'        => 'active',
+    'type'          => 'instance',
+    'document_root' => '/tmp/fake',
+]);
+
+// Instance::create has a fixed column set — set domain fields via update
+\Swarm\Models\Instance::update($removeDomainTestId, [
+    'custom_domain'      => 'should-survive.example.com',
+    'domain_verified_at' => $now,
+    'domain_ssl_at'      => $now,
+]);
+
+// Verify domain is set before calling the controller
+$beforeRow = \Swarm\Database::query(
+    'SELECT custom_domain, domain_verified_at, domain_ssl_at FROM instances WHERE id = ?',
+    [$removeDomainTestId]
+)->fetch(\PDO::FETCH_ASSOC);
+assert_equals('should-survive.example.com', $beforeRow['custom_domain'], 'custom_domain set before test');
+
+// ── Failure path: call the actual controller method with the failing adapter
+$failResult = \Swarm\Controllers\InstanceController::executeRemoveDomain(
+    $removeDomainTestId,
+    $failingAdapter
+);
+
+// The controller must return 500 with an error message
+assert_equals(500, $failResult['status'], 'Adapter failure returns HTTP 500');
+assert_true(
+    isset($failResult['body']['error']),
+    'Failure response contains error key'
+);
+assert_true(
+    strpos($failResult['body']['error'], 'Connection refused') !== false,
+    'Error message contains adapter exception detail'
+);
+assert_true(
+    strpos($failResult['body']['error'], 'domain is still tracked') !== false,
+    'Error message tells operator domain is still tracked'
+);
+
+// DB state must be preserved — domain NOT cleared
+$afterFailRow = \Swarm\Database::query(
+    'SELECT custom_domain, domain_verified_at, domain_ssl_at FROM instances WHERE id = ?',
+    [$removeDomainTestId]
+)->fetch(\PDO::FETCH_ASSOC);
+
+assert_equals('should-survive.example.com', $afterFailRow['custom_domain'], 'custom_domain preserved after adapter failure');
+assert_equals($now, $afterFailRow['domain_verified_at'], 'domain_verified_at preserved after adapter failure');
+assert_equals($now, $afterFailRow['domain_ssl_at'], 'domain_ssl_at preserved after adapter failure');
+
+// ── Success path: call with a passing adapter to prove cleanup works
+$passingAdapter = new class([]) implements \Swarm\Adapters\ControlPanelAdapter {
+    public function createSubdomain(string $slug, string $documentRoot): void {}
+    public function removeSubdomain(string $slug): void {}
+    public function pauseSubdomain(string $slug): void {}
+    public function resumeSubdomain(string $slug): void {}
+    public function verify(): array { return ['ok' => true, 'message' => 'test']; }
+    public function addDomain(string $slug, string $domain): void {}
+    public function removeDomain(string $slug, string $domain): void {} // no-throw = success
+};
+
+$successResult = \Swarm\Controllers\InstanceController::executeRemoveDomain(
+    $removeDomainTestId,
+    $passingAdapter
+);
+
+assert_equals(200, $successResult['status'], 'Successful removal returns HTTP 200');
+assert_true(isset($successResult['body']['ok']), 'Success response contains ok key');
+
+// DB state must be cleared after successful removal
+$afterSuccessRow = \Swarm\Database::query(
+    'SELECT custom_domain, domain_verified_at, domain_ssl_at FROM instances WHERE id = ?',
+    [$removeDomainTestId]
+)->fetch(\PDO::FETCH_ASSOC);
+
+assert_true($afterSuccessRow['custom_domain'] === null, 'custom_domain cleared after successful removal');
+assert_true($afterSuccessRow['domain_verified_at'] === null, 'domain_verified_at cleared after successful removal');
+assert_true($afterSuccessRow['domain_ssl_at'] === null, 'domain_ssl_at cleared after successful removal');
+
+// ── Edge case: calling again with no domain should return 422
+$noDomainResult = \Swarm\Controllers\InstanceController::executeRemoveDomain(
+    $removeDomainTestId,
+    $passingAdapter
+);
+assert_equals(422, $noDomainResult['status'], 'No-domain returns HTTP 422');
+
+// Cleanup: remove the test instance
+\Swarm\Database::query('DELETE FROM instances WHERE slug = ?', [$removeDomainTestSlug]);
+
 // ─── Cleanup ───────────────────────────────────────────────────
 
 $cleanup = function (string $dir) use (&$cleanup): void {

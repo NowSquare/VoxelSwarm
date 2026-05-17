@@ -108,6 +108,36 @@ class NginxAdapter implements ControlPanelAdapter
         return ['ok' => true, 'message' => 'Nginx adapter verified. Conf dir writable, config valid.'];
     }
 
+    public function addDomain(string $slug, string $domain): void
+    {
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || !$instance['document_root']) {
+            throw new \RuntimeException("Cannot add domain: instance '{$slug}' has no document root");
+        }
+
+        $confPath = $this->confDir . "/domain-{$slug}.conf";
+        $conf = $this->buildServerBlock($domain, $instance['document_root']);
+
+        file_put_contents($confPath, $conf);
+        Logger::info('adapter', 'Nginx domain conf written', ['slug' => $slug, 'domain' => $domain, 'path' => $confPath]);
+
+        $this->reloadNginx();
+
+        // Attempt per-domain SSL via Certbot (best-effort)
+        $this->certbotDomain($domain, $instance['document_root'], $slug);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        $confPath = $this->confDir . "/domain-{$slug}.conf";
+
+        if (file_exists($confPath)) {
+            unlink($confPath);
+            Logger::info('adapter', 'Nginx domain conf removed', ['slug' => $slug, 'domain' => $domain]);
+            $this->reloadNginx();
+        }
+    }
+
     private function buildServerBlock(string $serverName, string $documentRoot): string
     {
         $ssl = '';
@@ -193,5 +223,97 @@ NGINX;
         }
 
         Logger::info('adapter', 'Nginx reloaded successfully');
+    }
+
+    /**
+     * Attempt per-domain SSL via Certbot webroot challenge.
+     * On success, rewrites the domain's server block with the Let's Encrypt
+     * cert paths and reloads Nginx so the certificate is actually served.
+     */
+    private function certbotDomain(string $domain, string $documentRoot, string $slug): void
+    {
+        $cmd = sprintf(
+            'certbot certonly --webroot -w %s -d %s --non-interactive --agree-tos --register-unsafely-without-email 2>&1',
+            escapeshellarg($documentRoot),
+            escapeshellarg($domain)
+        );
+
+        $process = Process::fromShellCommandline($cmd);
+        $process->setTimeout(120);
+        $process->run();
+
+        if (!$process->isSuccessful()) {
+            Logger::warning('adapter', 'Certbot SSL failed for custom domain (non-fatal)', [
+                'domain' => $domain,
+                'output' => $process->getOutput(),
+                'error'  => $process->getErrorOutput(),
+            ]);
+            return;
+        }
+
+        Logger::info('adapter', 'Certbot SSL provisioned for custom domain', ['domain' => $domain]);
+
+        // Wire the Let's Encrypt cert into the domain server block
+        $certPath = "/etc/letsencrypt/live/{$domain}/fullchain.pem";
+        $keyPath  = "/etc/letsencrypt/live/{$domain}/privkey.pem";
+
+        if (file_exists($certPath) && file_exists($keyPath)) {
+            $confPath = $this->confDir . "/domain-{$slug}.conf";
+            $conf = $this->buildDomainServerBlock($domain, $documentRoot, $certPath, $keyPath);
+            file_put_contents($confPath, $conf);
+
+            Logger::info('adapter', 'Nginx domain conf updated with SSL cert', [
+                'domain' => $domain,
+                'cert'   => $certPath,
+            ]);
+
+            $this->reloadNginx();
+        }
+    }
+
+    /**
+     * Build a server block for a custom domain with per-domain SSL paths.
+     * Separate from buildServerBlock() which uses the adapter's static wildcard cert.
+     */
+    private function buildDomainServerBlock(
+        string $serverName,
+        string $documentRoot,
+        string $sslCertPath,
+        string $sslKeyPath
+    ): string {
+        return <<<NGINX
+server {
+    listen 80;
+    server_name {$serverName};
+    return 301 https://\$host\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    ssl_certificate     {$sslCertPath};
+    ssl_certificate_key {$sslKeyPath};
+    server_name {$serverName};
+    root {$documentRoot};
+    index index.php index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+
+    location ~* \.(db|sqlite|sql|sh|env|bak|log)$ {
+        deny all;
+    }
+}
+NGINX;
     }
 }

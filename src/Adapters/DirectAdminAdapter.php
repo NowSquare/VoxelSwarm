@@ -466,4 +466,69 @@ p{color:#71717A;margin-top:8px}
 </html>
 PHP;
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        // The 'domain' parameter must be the subdomain the pointer targets,
+        // not the base domain. Custom domains must route to the specific
+        // tenant instance at {slug}.{baseDomain}.
+        $targetDomain = "{$slug}.{$this->baseDomain}";
+
+        $response = $this->apiRequest('CMD_API_DOMAIN_POINTER', [
+            'action' => 'add',
+            'domain' => $targetDomain,
+            'from'   => $domain,
+        ]);
+
+        if ($this->hasError($response)) {
+            $text = $response['text'] ?? $response['details'] ?? 'Unknown error';
+
+            // "already exists" is idempotent success
+            if (stripos($text, 'already exists') !== false) {
+                \Swarm\Logger::info('adapter', 'DirectAdmin domain pointer already exists (idempotent)', [
+                    'slug'   => $slug,
+                    'domain' => $domain,
+                ]);
+            } else {
+                throw new \RuntimeException("DirectAdmin add domain pointer failed: {$text}");
+            }
+        }
+
+        \Swarm\Logger::info('adapter', 'DirectAdmin domain pointer added', [
+            'slug'   => $slug,
+            'domain' => $domain,
+            'target' => $targetDomain,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        $targetDomain = "{$slug}.{$this->baseDomain}";
+
+        $response = $this->apiRequest('CMD_API_DOMAIN_POINTER', [
+            'action'  => 'delete',
+            'domain'  => $targetDomain,
+            'select0' => $domain,
+        ]);
+
+        if ($this->hasError($response)) {
+            $text = $response['text'] ?? $response['details'] ?? 'Unknown error';
+
+            if (stripos($text, 'does not exist') !== false
+                || stripos($text, 'not found') !== false) {
+                \Swarm\Logger::info('adapter', 'DirectAdmin domain pointer already removed (idempotent)', [
+                    'slug'   => $slug,
+                    'domain' => $domain,
+                ]);
+                return;
+            }
+
+            throw new \RuntimeException("DirectAdmin remove domain pointer failed: {$text}");
+        }
+
+        \Swarm\Logger::info('adapter', 'DirectAdmin domain pointer removed', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
 }

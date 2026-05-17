@@ -90,6 +90,18 @@ class ForgeAdapter implements ControlPanelAdapter
             throw new \RuntimeException("Forge API request failed: {$method} {$endpoint}");
         }
 
+        // Validate HTTP status
+        $httpStatus = 0;
+        if (!empty($http_response_header[0]) && preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0], $m)) {
+            $httpStatus = (int) $m[1];
+        }
+
+        if ($httpStatus >= 400) {
+            $body = json_decode($response, true);
+            $msg  = $body['message'] ?? $body['error'] ?? "HTTP {$httpStatus}";
+            throw new \RuntimeException("Forge API {$method} {$endpoint} failed: {$msg}");
+        }
+
         \Swarm\Logger::info('adapter', "Forge API: {$method} {$endpoint}", [
             'status' => $http_response_header[0] ?? 'unknown',
         ]);
@@ -109,5 +121,43 @@ class ForgeAdapter implements ControlPanelAdapter
         }
 
         return null;
+    }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        $siteId = $this->findSiteId($slug);
+        if (!$siteId) {
+            throw new \RuntimeException("Cannot add domain: Forge site not found for '{$slug}'");
+        }
+
+        $this->forgeRequest('POST', "/servers/{$this->serverId}/sites/{$siteId}/aliases", [
+            'domain' => $domain,
+        ]);
+
+        \Swarm\Logger::info('adapter', 'Forge domain alias added', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        $siteId = $this->findSiteId($slug);
+        if (!$siteId) {
+            return; // Idempotent: site doesn't exist
+        }
+
+        // Find the alias ID
+        $response = $this->forgeRequest('GET', "/servers/{$this->serverId}/sites/{$siteId}/aliases");
+        foreach ($response['aliases'] ?? [] as $alias) {
+            if ($alias['domain'] === $domain) {
+                $this->forgeRequest('DELETE', "/servers/{$this->serverId}/sites/{$siteId}/aliases/{$alias['id']}");
+                \Swarm\Logger::info('adapter', 'Forge domain alias removed', [
+                    'slug'   => $slug,
+                    'domain' => $domain,
+                ]);
+                return;
+            }
+        }
     }
 }

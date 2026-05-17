@@ -64,4 +64,14 @@ class HestiaCPAdapter implements ControlPanelAdapter
 
         return ['ok' => false, 'message' => 'HestiaCP adapter is not yet implemented. Contributions welcome.'];
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('HestiaCP adapter is not yet implemented.');
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('HestiaCP adapter is not yet implemented.');
+    }
 }

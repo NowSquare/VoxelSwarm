@@ -64,6 +64,9 @@ $router->group(['prefix' => '/operator', 'middleware' => ['auth']], function (Ro
     $r->delete('/instances/{id}',             [InstanceController::class,     'destroy']);
     $r->post('/instances/{id}/pause',         [InstanceController::class,     'pause']);
     $r->post('/instances/{id}/resume',        [InstanceController::class,     'resume']);
+    $r->post('/instances/{id}/domain',         [InstanceController::class,     'setDomain']);
+    $r->delete('/instances/{id}/domain',       [InstanceController::class,     'removeDomain']);
+    $r->post('/instances/{id}/domain/recheck', [InstanceController::class,     'recheckSsl']);
     $r->get('/templates',                     [TemplateController::class,     'index']);
     $r->post('/templates/process',            [TemplateController::class,     'process']);
     $r->post('/templates/activate',           [TemplateController::class,     'activate']);

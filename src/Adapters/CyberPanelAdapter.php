@@ -66,4 +66,14 @@ class CyberPanelAdapter implements ControlPanelAdapter
 
         return ['ok' => false, 'message' => 'CyberPanel adapter is not yet implemented. Contributions welcome.'];
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('CyberPanel adapter is not yet implemented.');
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('CyberPanel adapter is not yet implemented.');
+    }
 }

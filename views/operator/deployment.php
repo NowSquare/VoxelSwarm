@@ -226,6 +226,14 @@ $headerClass = "px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
                    value="<?= htmlspecialchars($s['max_instances'] ?? '100') ?>" min="1">
             <p class="<?= $hintClass ?>">Signups are blocked at this limit. ~32 MB per instance.</p>
           </div>
+          <div>
+            <label class="<?= $labelClass ?>" for="server_ip">
+              <span class="inline-flex items-center gap-1.5"><svg class="w-3.5 h-3.5 text-zinc-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> Server IP</span>
+            </label>
+            <input class="<?= $inputClass ?>" type="text" id="server_ip" name="server_ip"
+                   value="<?= htmlspecialchars($s['server_ip'] ?? '') ?>" placeholder="203.0.113.42">
+            <p class="<?= $hintClass ?>">The IP custom domains should point to. Used for DNS verification. Comma-separate for IPv4 + IPv6.</p>
+          </div>
         </div>
       </div>
 

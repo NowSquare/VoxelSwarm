@@ -86,5 +86,21 @@ class LocalAdapter implements ControlPanelAdapter
             'message' => "Filesystem adapter verified. Instances deploy to: {$path}. No subdomain management — handle routing manually or use for testing.",
         ];
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        Logger::info('adapter', 'LocalAdapter: custom domain registered (no server config created)', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        Logger::info('adapter', 'LocalAdapter: custom domain removed (no server config to clean up)', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
 }
 

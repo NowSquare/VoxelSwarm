@@ -58,4 +58,14 @@ class CloudPanelAdapter implements ControlPanelAdapter
 
         return ['ok' => false, 'message' => 'CloudPanel adapter is not yet implemented. Contributions welcome.'];
     }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('CloudPanel adapter is not yet implemented.');
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        throw new \RuntimeException('CloudPanel adapter is not yet implemented.');
+    }
 }

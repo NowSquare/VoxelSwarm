@@ -88,10 +88,55 @@ class PleskAdapter implements ControlPanelAdapter
             throw new \RuntimeException("Plesk API request failed: {$method} {$endpoint}");
         }
 
+        // Validate HTTP status
+        $httpStatus = 0;
+        if (!empty($http_response_header[0]) && preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0], $m)) {
+            $httpStatus = (int) $m[1];
+        }
+
+        if ($httpStatus >= 400) {
+            $body = json_decode($response, true);
+            $msg  = $body['message'] ?? $body['error'] ?? "HTTP {$httpStatus}";
+            throw new \RuntimeException("Plesk API {$method} {$endpoint} failed: {$msg}");
+        }
+
         \Swarm\Logger::info('adapter', "Plesk API: {$method} {$endpoint}", [
             'status' => $http_response_header[0] ?? 'unknown',
         ]);
 
         return json_decode($response, true) ?: [];
+    }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        $subdomain = "{$slug}.{$this->baseDomain}";
+
+        $this->pleskRequest('POST', "/api/v2/domains/{$subdomain}/aliases", [
+            'name' => $domain,
+        ]);
+
+        \Swarm\Logger::info('adapter', 'Plesk domain alias added', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        $subdomain = "{$slug}.{$this->baseDomain}";
+
+        try {
+            $this->pleskRequest('DELETE', "/api/v2/domains/{$subdomain}/aliases/{$domain}");
+        } catch (\Throwable $e) {
+            // Idempotent: alias may not exist
+            if (stripos($e->getMessage(), 'not found') === false) {
+                throw $e;
+            }
+        }
+
+        \Swarm\Logger::info('adapter', 'Plesk domain alias removed', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
     }
 }

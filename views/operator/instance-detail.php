@@ -144,6 +144,113 @@ $headerClass = "px-5 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
   </div>
 </div>
 
+<!-- Custom Domain -->
+<?php if ($isActive || $isPaused): ?>
+<div class="<?= $cardClass ?> mb-6" id="domain-section">
+  <div class="<?= $headerClass ?> flex items-center justify-between">
+    <div>
+      <h2 class="text-base font-semibold tracking-tight text-zinc-900 dark:text-white">Custom Domain</h2>
+      <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Attach a fully qualified domain to this instance.</p>
+    </div>
+    <?php if (!empty($instance['custom_domain'])): ?>
+      <div class="flex items-center gap-2">
+        <?php if ($instance['domain_verified_at']): ?>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-green-100/50 text-green-700 dark:bg-green-500/10 dark:text-green-400 ring-1 ring-inset ring-green-600/20 dark:ring-green-500/20">
+            <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-1.5"></span>
+            VERIFIED
+          </span>
+        <?php endif; ?>
+        <?php if ($instance['domain_ssl_at']): ?>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-green-100/50 text-green-700 dark:bg-green-500/10 dark:text-green-400 ring-1 ring-inset ring-green-600/20 dark:ring-green-500/20">
+            <svg class="w-3 h-3 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            SSL
+          </span>
+        <?php else: ?>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold tracking-wide bg-amber-100/50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 ring-1 ring-inset ring-amber-600/20 dark:ring-amber-500/20">
+            <svg class="w-3 h-3 mr-1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            SSL PENDING
+          </span>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+
+  <div class="p-5">
+    <?php if (empty($instance['custom_domain'])): ?>
+      <!-- ── No domain set ── -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-end gap-3">
+        <div class="flex-1 w-full sm:w-auto">
+          <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">Domain</label>
+          <input id="domain-input" type="text" placeholder="example.com"
+                 class="block w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2.5 text-sm text-zinc-900 dark:text-white placeholder-zinc-400 focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500 transition-shadow">
+        </div>
+        <button id="btn-add-domain" onclick="addDomain(false)" class="sw-btn-primary inline-flex items-center gap-1.5 px-4 py-2.5 whitespace-nowrap">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+          Verify &amp; Add
+        </button>
+      </div>
+      <?php if (!empty($serverIp)): ?>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-3">
+          <svg class="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          Point your domain's A record to <code class="text-xs bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono"><?= htmlspecialchars($serverIp) ?></code>, then enter it here.
+        </p>
+      <?php else: ?>
+        <p class="text-xs text-amber-600 dark:text-amber-400 mt-3">
+          <svg class="w-3.5 h-3.5 inline-block mr-1 -mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          Set your server IP in <a href="/operator/deployment" class="underline hover:text-amber-700 dark:hover:text-amber-300">Deployment settings</a> first.
+        </p>
+      <?php endif; ?>
+
+      <!-- DNS pending feedback area -->
+      <div id="domain-dns-pending" class="hidden mt-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-sm">
+        <p class="font-medium text-amber-800 dark:text-amber-300 mb-2">DNS not pointing to this server yet.</p>
+        <div class="font-mono text-xs bg-white/50 dark:bg-zinc-950/50 rounded-lg p-3 mb-3 text-amber-900 dark:text-amber-200">
+          <span id="dns-record-info"></span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="addDomain(false)" class="sw-btn-secondary text-xs px-3 py-1.5">Re-check DNS</button>
+          <button onclick="addDomain(true)" class="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 underline transition-colors">Force add (skip verification)</button>
+        </div>
+      </div>
+      <div id="domain-error" class="hidden mt-4 p-4 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-sm text-red-600 dark:text-red-400"></div>
+
+    <?php else: ?>
+      <!-- ── Domain is set ── -->
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg bg-green-100 dark:bg-green-500/10 flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-green-600 dark:text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <a href="https://<?= htmlspecialchars($instance['custom_domain']) ?>" target="_blank"
+               class="text-sm font-semibold text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400 transition-colors inline-flex items-center gap-1">
+              <?= htmlspecialchars($instance['custom_domain']) ?>
+              <svg class="w-3 h-3 opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+              Subdomain: <?= htmlspecialchars($instance['subdomain']) ?>
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <?php if (!$instance['domain_ssl_at']): ?>
+            <button onclick="recheckSsl()" class="sw-btn-secondary text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+              Re-check SSL
+            </button>
+          <?php endif; ?>
+          <button onclick="swConfirm({ title: 'Remove custom domain?', message: '<?= htmlspecialchars($instance['custom_domain']) ?> will be disconnected. The subdomain continues to serve this instance.', confirmLabel: 'Remove Domain', danger: true }).then(() => removeDomainAction()).catch(() => {})"
+                  class="sw-btn-danger text-xs px-3 py-1.5 inline-flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            Remove
+          </button>
+        </div>
+      </div>
+    <?php endif; ?>
+  </div>
+</div>
+<?php endif; ?>
+
 <!-- Operator Notes -->
 <div class="<?= $cardClass ?> mb-6">
   <div class="<?= $headerClass ?>">
@@ -283,5 +390,101 @@ $headerClass = "px-5 py-4 border-b border-zinc-100 dark:border-zinc-800/80 bg-zi
       btn.disabled = false;
       showToast('Request failed — check your connection.', 'error');
     });
+  }
+
+  /* ── Custom Domain ─────────────────────────────────────────── */
+
+  function addDomain(force) {
+    const input = document.getElementById('domain-input');
+    if (!input) return;
+
+    const domain = input.value.trim();
+    if (!domain) {
+      showToast('Enter a domain.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btn-add-domain');
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="flex items-center gap-2"><svg class="animate-spin h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Verifying…</span>';
+
+    let body = '_token=' + encodeURIComponent(csrf) + '&domain=' + encodeURIComponent(domain);
+    if (force) body += '&force=1';
+
+    // Hide previous feedback
+    const dnsPending = document.getElementById('domain-dns-pending');
+    const domainError = document.getElementById('domain-error');
+    if (dnsPending) dnsPending.classList.add('hidden');
+    if (domainError) domainError.classList.add('hidden');
+
+    fetch('/operator/instances/' + instanceId + '/domain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    })
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+
+      if (data.ok) {
+        showToast('Domain added' + (data.ssl_active ? ' with SSL.' : '. SSL pending.'), 'success');
+        setTimeout(() => location.reload(), 800);
+      } else if (data.dns_pending) {
+        if (dnsPending) {
+          dnsPending.classList.remove('hidden');
+          const info = document.getElementById('dns-record-info');
+          if (info) info.textContent = data.record_type + ' ' + data.record_name + ' → ' + data.record_value;
+        }
+      } else {
+        if (domainError) {
+          domainError.textContent = data.error || 'Failed to add domain.';
+          domainError.classList.remove('hidden');
+        }
+        showToast(data.error || 'Failed to add domain.', 'error');
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+      showToast('Request failed — check your connection.', 'error');
+    });
+  }
+
+  function removeDomainAction() {
+    fetch('/operator/instances/' + instanceId + '/domain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '_token=' + encodeURIComponent(csrf) + '&_method=DELETE'
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        showToast('Domain removed.', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(data.error || 'Failed to remove domain.', 'error');
+      }
+    })
+    .catch(() => showToast('Request failed.', 'error'));
+  }
+
+  function recheckSsl() {
+    fetch('/operator/instances/' + instanceId + '/domain/recheck', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: '_token=' + encodeURIComponent(csrf)
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.ssl_active) {
+        showToast('SSL is active.', 'success');
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast('SSL not ready yet. Try again later.', 'info');
+      }
+    })
+    .catch(() => showToast('Request failed.', 'error'));
   }
 </script>

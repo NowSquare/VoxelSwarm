@@ -40,6 +40,7 @@ class DeploymentController
         $fields = [
             'base_domain', 'max_instances', 'public_site_enabled',
             'signups_enabled', 'control_panel_adapter', 'mail_driver',
+            'server_ip',
         ];
 
         foreach ($fields as $field) {

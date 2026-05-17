@@ -156,11 +156,42 @@ class CpanelAdapter implements ControlPanelAdapter
             throw new \RuntimeException("WHM API request failed: {$function}");
         }
 
+        // Validate HTTP status
+        $httpStatus = $this->extractHttpStatusFromHeaders($http_response_header ?? []);
+        if ($httpStatus >= 400) {
+            throw new \RuntimeException(
+                "WHM API {$function} returned HTTP {$httpStatus}"
+            );
+        }
+
         \Swarm\Logger::info('adapter', "WHM API: {$function}", [
             'status' => $http_response_header[0] ?? 'unknown',
         ]);
 
-        return json_decode($response, true) ?: [];
+        $decoded = json_decode($response, true) ?: [];
+
+        // Check WHM response body for errors
+        $result = $decoded['result'] ?? $decoded['data'] ?? null;
+        if (is_array($result) && isset($result[0]['status']) && (int) $result[0]['status'] === 0) {
+            $statusMsg = $result[0]['statusmsg'] ?? 'Unknown WHM error';
+            throw new \RuntimeException("WHM API {$function} failed: {$statusMsg}");
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Extract HTTP status code from response headers.
+     */
+    private function extractHttpStatusFromHeaders(array $headers): int
+    {
+        if (empty($headers) || empty($headers[0])) {
+            return 0;
+        }
+        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $headers[0], $m)) {
+            return (int) $m[1];
+        }
+        return 0;
     }
 
     /**
@@ -193,5 +224,61 @@ p{color:#71717A;margin-top:8px}
 </body>
 </html>
 PHP;
+    }
+
+    public function addDomain(string $slug, string $domain): void
+    {
+        $instance = \Swarm\Models\Instance::findBySlug($slug);
+        if (!$instance || empty($instance['document_root'])) {
+            throw new \RuntimeException("Cannot add domain: instance '{$slug}' has no document root");
+        }
+
+        $this->whmRequest('adddomain', [
+            'domain'    => $domain,
+            'trueowner' => $this->whmUsername,
+            'dir'       => $instance['document_root'],
+        ]);
+
+        // Trigger AutoSSL for the new domain (best-effort)
+        try {
+            $this->whmRequest('start_autossl_check_for_one_user', [
+                'username' => $this->whmUsername,
+            ]);
+        } catch (\Throwable $e) {
+            \Swarm\Logger::warning('adapter', 'cPanel AutoSSL trigger failed (non-fatal)', [
+                'domain' => $domain,
+                'error'  => $e->getMessage(),
+            ]);
+        }
+
+        \Swarm\Logger::info('adapter', 'cPanel domain added', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
+    }
+
+    public function removeDomain(string $slug, string $domain): void
+    {
+        try {
+            $this->whmRequest('removedomainbyname', [
+                'domain' => $domain,
+            ]);
+        } catch (\Throwable $e) {
+            // Idempotent: suppress "does not exist" / "not found" errors.
+            // Any other failure is a real problem and should propagate.
+            $msg = strtolower($e->getMessage());
+            if (strpos($msg, 'not found') === false && strpos($msg, 'does not exist') === false) {
+                throw $e;
+            }
+            \Swarm\Logger::info('adapter', 'cPanel removeDomain: domain already absent (idempotent)', [
+                'slug'   => $slug,
+                'domain' => $domain,
+            ]);
+        }
+
+        \Swarm\Logger::info('adapter', 'cPanel domain removed', [
+            'slug'   => $slug,
+            'domain' => $domain,
+        ]);
     }
 }
