@@ -7,6 +7,8 @@
 | **Author** | VoxelSwarm core |
 | **Related** | `src/Adapters/CpanelAdapter.php`, `docs/adapters/cpanel.md` |
 
+> **Historical note (2026-06-13):** An earlier draft of this ADR framed the subdomain model's closed-code-access property differently. VoxelSite is now free and open source under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html), so the current concern is **code access and operator control**: whether end users can extract the full builder. The subdomain model remains the default on that, plus simplicity, secure defaults, no per-instance credentials to leak, and a smaller complexity budget. The decision is unchanged.
+
 ## Context
 
 VoxelSwarm provisions isolated website instances for end users. Each instance needs a publicly routable domain, a document root on disk, and (optionally) resource limits.
@@ -61,7 +63,7 @@ Estimated changes (would need a spike to confirm the full scope):
 
 | Aspect | Assessment |
 |--------|------------|
-| **License protection** | Strong. End users have zero filesystem access. No FTP, no File Manager, no SSH. They cannot download the VoxelSite codebase. |
+| **Code access** | Closed. End users have zero filesystem access. No FTP, no File Manager, no SSH. They cannot download the VoxelSite codebase. |
 | **Resource isolation** | Weak. All instances share the parent account's quota and bandwidth. One heavy user affects everyone. |
 | **Per-user limits** | Not available. cPanel packages don't apply to subdomains. |
 | **Provisioning complexity** | Low. Single API call, no username constraints, no credential management. |
@@ -73,7 +75,7 @@ Estimated changes (would need a spike to confirm the full scope):
 
 | Aspect | Assessment |
 |--------|------------|
-| **License protection** | Depends entirely on the assigned plan. A misconfigured plan with File Manager or FTP enabled = users can download the entire codebase and run it without a license. |
+| **Code access** | Depends entirely on the assigned plan. A misconfigured plan with File Manager or FTP enabled = users can download the entire codebase. |
 | **Resource isolation** | Strong. Each account has its own disk quota, bandwidth cap, and inode limit via the package. |
 | **Per-user limits** | Full cPanel package controls. The operator can tier features (basic plan, pro plan, etc.). |
 | **Provisioning complexity** | High. Username constraints (16 char max, unique, alphanumeric). Credential lifecycle. Plan must pre-exist on the server. |
@@ -81,13 +83,13 @@ Estimated changes (would need a spike to confirm the full scope):
 | **Operator control** | Shared. Each instance is a real system user. Operators must manage cPanel feature lists and shell access. |
 | **cPanel UI exposure** | High risk. Unless the plan explicitly disables it, end users get File Manager, FTP, terminal, backup tools — all of which expose the source code. |
 
-The core tension is that these two models optimise for opposite things. The subdomain model trades resource isolation for simplicity and airtight license protection. The full-account model trades simplicity and default security for granular per-user resource controls. Neither is strictly better — it depends on what the operator values and how much they trust their own cPanel configuration discipline.
+The core tension is that these two models optimise for opposite things. The subdomain model trades resource isolation for simplicity and a closed code-access boundary. The full-account model trades simplicity and default security for granular per-user resource controls. Neither is strictly better — it depends on what the operator values and how much they trust their own cPanel configuration discipline.
 
 ## Current reasoning
 
 The subdomain model is the current default for four reasons. These are the arguments to challenge if you think the decision should flip.
 
-1. **License protection is a primary project concern.** An operator selling VoxelSite instances probably does not want users extracting the codebase. The subdomain model eliminates this class of risk by design — there are no credentials to leak, no File Manager to misconfigure. The full-account model makes this security property opt-in (dependent on correct plan configuration), not default.
+1. **Code access is a primary project concern.** An operator provisioning VoxelSite instances for clients usually does not want end users extracting the full codebase. The subdomain model eliminates this class of risk by design — there are no credentials to leak, no File Manager to misconfigure. The full-account model makes this property opt-in (dependent on correct plan configuration), not default.
 
 2. **Configuration discipline is unreliable at scale.** Even with documentation telling operators to disable FTP and File Manager, plans get misconfigured. Hosting providers reset defaults. cPanel updates re-enable features. The subdomain model doesn't have this failure mode.
 
@@ -98,7 +100,7 @@ The subdomain model is the current default for four reasons. These are the argum
 ## What would change the decision
 
 - **Operator demand for per-instance resource quotas** that can't be solved at the PHP/application layer (e.g., email accounts, dedicated MySQL limits).
-- **A "managed cPanel" mode** where VoxelSwarm provisions accounts but **never exposes cPanel credentials to end users** — using the account purely for resource isolation while keeping all user interaction through VoxelSite's UI. This sidesteps the license risk but adds complexity.
+- **A "managed cPanel" mode** where VoxelSwarm provisions accounts but **never exposes cPanel credentials to end users** — using the account purely for resource isolation while keeping all user interaction through VoxelSite's UI. This sidesteps the code-access risk but adds complexity.
 - **Reseller hosting scenarios** where the operator already manages cPanel accounts and wants VoxelSwarm to integrate with their existing provisioning workflow rather than bypass it.
 
 If any of these become concrete requirements, this ADR should be revisited. A possible middle path: offer both modes (`cpanel_mode: subdomain | account`) and let the operator choose, with subdomain as default and account mode requiring explicit plan configuration + a "I understand the risks" acknowledgment.

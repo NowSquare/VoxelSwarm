@@ -2,7 +2,7 @@
   "name": "voxelswarm",
   "version": "1.0.0",
   "private": true,
-  "description": "VoxelSwarm — development tooling (not shipped to buyers)",
+  "description": "VoxelSwarm — front-end build tooling (local development only, not part of the deployed app)",
   "scripts": {
     "build:css": "npx @tailwindcss/cli -i ./ui/src/swarm.src.css -o ./build/swarm.css --minify",
     "build": "npm run build:css",

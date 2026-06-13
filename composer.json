@@ -2,7 +2,7 @@
   "name": "voxelsite/voxelswarm",
   "description": "VoxelSite instance provisioning and management. Plain PHP, SQLite, two dependencies.",
   "type": "project",
-  "license": "proprietary",
+  "license": "MIT",
   "require": {
     "php": ">=8.2",
     "symfony/process": "^7.0",

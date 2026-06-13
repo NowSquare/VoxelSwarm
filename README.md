@@ -4,7 +4,7 @@
 
 VoxelSwarm is a free, open-source deployment layer that turns one [VoxelSite](https://voxelsite.com) installation into a multi-tenant platform. Each user gets their own isolated hosting account, their own AI website builder, their own API key. No SaaS. No shared infrastructure. No middlemen.
 
-> ⚠️ **Early Access** — VoxelSwarm requires extensive testing across different hosting environments and control panels. Please read [docs/testing-feedback.md](docs/testing-feedback.md) before reporting issues. A regular VoxelSite license is all you need for testing.
+> ⚠️ **Early Access** — VoxelSwarm requires extensive testing across different hosting environments and control panels. Please read [docs/testing-feedback.md](docs/testing-feedback.md) before reporting issues.
 
 ---
 
@@ -18,7 +18,7 @@ You could run VoxelSite as a centralized SaaS — one app, shared database, mont
 - Billing, subscriptions, churn — revenue depends on retaining paying users month to month
 - One bug affects everyone
 
-**VoxelSwarm takes a different approach.** Each client gets a full, isolated VoxelSite installation. Each brings their own AI API key. One VPS, one license, predictable costs. No billing system needed — charge per project, per month, or give it away. Your business model.
+**VoxelSwarm takes a different approach.** Each client gets a full, isolated VoxelSite installation. Each brings their own AI API key. One VPS, predictable costs. No billing system needed — charge per project, per month, or give it away. Your business model.
 
 ---
 
@@ -45,7 +45,7 @@ The wizard runs system checks, then lets you configure your domain, operator acc
 
 ### 3. Prepare your VoxelSite template
 
-Upload your VoxelSite ZIP (purchased from [CodeCanyon](https://voxelsite.com/buy)) to `template/voxelsite/` and process it from the **Templates** page in the operator dashboard.
+Add a [VoxelSite](https://voxelsite.com) release ZIP to `template/voxelsite/` and process it from the **Templates** page in the operator dashboard. VoxelSite is free and open source — get it from [voxelsite.com](https://voxelsite.com) or [github.com/NowSquare/VoxelSite](https://github.com/NowSquare/VoxelSite).
 
 This extracts VoxelSite, moves the image library to a shared location (saving ~15 MB per instance), and generates the image manifest. ZIPs can have any filename — VoxelSwarm reads the `VERSION` file inside.
 
@@ -63,7 +63,7 @@ By default, VoxelSwarm runs in **operator-only mode** — `GET /` redirects to t
 - **Web server:** Nginx (recommended) or Apache with `mod_rewrite`
 - **Wildcard DNS:** `*.yourdomain.com → your server IP` (required for Nginx and DirectAdmin adapters — Forge, cPanel, and Plesk handle this automatically)
 - **Wildcard SSL:** for `*.yourdomain.com` (required for Nginx and DirectAdmin adapters — other adapters provision SSL per-subdomain)
-- **VoxelSite license:** [voxelsite.com/buy](https://voxelsite.com/buy)
+- **VoxelSite:** [voxelsite.com](https://voxelsite.com) or [github.com/NowSquare/VoxelSite](https://github.com/NowSquare/VoxelSite) — free and open source (AGPL-3.0)
 - No MySQL. No Node.js. No Redis. No Composer required — `vendor/` is included in the repo.
 
 ---
@@ -137,9 +137,7 @@ VoxelSwarm/
 
 ## Licensing
 
-VoxelSwarm itself is **free and open source** (MIT License).
-
-To deploy instances, you need a VoxelSite license — [voxelsite.com/buy](https://voxelsite.com/buy).
+VoxelSwarm is **free and open source** under the [MIT License](LICENSE). It deploys [VoxelSite](https://voxelsite.com), which is also free and open source under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html) — get it from [voxelsite.com](https://voxelsite.com) or [github.com/NowSquare/VoxelSite](https://github.com/NowSquare/VoxelSite).
 
 ---
 
@@ -159,7 +157,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 ## Support
 
 - **Check the logs:** `storage/logs/` contains detailed, structured logs for every provisioning step, adapter call, email, and operator action. See [Testing & Feedback](docs/testing-feedback.md) and [Troubleshooting → Log Files](docs/troubleshooting.md#log-files).
-- **Report a bug:** Start with [docs/testing-feedback.md](docs/testing-feedback.md), then open an issue at [github.com/NowSquare/VoxelSwarm/issues](https://github.com/NowSquare/VoxelSwarm/issues). If you are a VoxelSite customer and prefer not to share logs publicly, you can also use [VoxelSite support](https://codecanyon.net/item/voxelsite-ai-website-generator-selfhosted-own-your-files/62090509/support).
+- **Report a bug:** Start with [docs/testing-feedback.md](docs/testing-feedback.md), then open an issue at [github.com/NowSquare/VoxelSwarm/issues](https://github.com/NowSquare/VoxelSwarm/issues).
 - **VoxelSite:** [voxelsite.com](https://voxelsite.com) — for VoxelSite-specific issues (the AI builder, not VoxelSwarm)
 - **Multi-Site:** [voxelsite.com/multi-site](https://voxelsite.com/multi-site)
 
@@ -169,7 +167,7 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a pull request.
 
 MIT — see [LICENSE](LICENSE).
 
-VoxelSite is a separate commercial product. VoxelSwarm is a deployment layer for VoxelSite, not a fork or redistribution.
+VoxelSite is a separate open-source product, under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html). VoxelSwarm is a deployment layer for VoxelSite, not a fork or redistribution.
 
 ---
 

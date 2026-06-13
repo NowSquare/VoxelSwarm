@@ -13,7 +13,7 @@ VoxelSwarm solves this by hosting the image library once in a centralized `libra
 VoxelSite ZIPs can have any filename. VoxelSwarm reads the `VERSION` file inside the ZIP to determine the version — it does **not** parse the filename. Both of these work:
 
 - `voxelsite-v1.8.0.zip`
-- `codecanyon-yi8z1J7A-voxelsite-ai-website-generator-selfhosted-own-your-files.zip`
+- `my-voxelsite-download.zip`
 
 If no `VERSION` file is found inside the ZIP, VoxelSwarm falls back to parsing the filename (e.g., extracting `1.8.0` from `voxelsite-v1.8.0.zip`).
 
@@ -70,7 +70,7 @@ VoxelSwarm supports multiple VoxelSite versions simultaneously:
 
 ```
 template/voxelsite/
-├── codecanyon-yi8z1J7A-....zip     ← Source ZIPs (any name)
+├── my-voxelsite-download.zip       ← Source ZIPs (any name)
 ├── voxelsite-v1.9.0.zip            ← Another ZIP
 ├── v1.8.0/                         ← Prepared version
 │   ├── VERSION

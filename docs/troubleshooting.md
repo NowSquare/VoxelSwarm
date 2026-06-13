@@ -238,7 +238,7 @@ A screenshot of the error state in the dashboard or browser console errors can c
 
 Log files may contain hostnames, email addresses, and API endpoint URLs. They do **not** contain passwords or API tokens (those are never logged). Review the log excerpts before pasting them publicly. If your report contains sensitive info, mention that in the issue and a maintainer will follow up privately.
 
-If you are a VoxelSite customer and prefer not to post logs in public, you can also send them through [VoxelSite support](https://codecanyon.net/item/voxelsite-ai-website-generator-selfhosted-own-your-files/62090509/support).
+If the problem is in VoxelSite itself (the AI builder, not VoxelSwarm), report it to the [VoxelSite project](https://github.com/NowSquare/VoxelSite/issues) or see [voxelsite.com](https://voxelsite.com).
 
 ### VoxelSite vs. VoxelSwarm issues
 

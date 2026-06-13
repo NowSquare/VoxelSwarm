@@ -7,6 +7,8 @@
 | **Author** | VoxelSwarm core |
 | **Related** | `template/voxelsite/v1.28.0/_studio/api/endpoints/export.php`, `views/landing.php` |
 
+> **Historical note (2026-06-13):** An earlier draft of this ADR framed the export boundary differently. VoxelSite is now free and open source under [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html), so the export boundary stands purely as a **code-access and portability** question: an export is the rendered website (standard HTML/CSS/PHP), not the AI builder, the same way Figma exports designs rather than Figma itself. The reasoning below reflects that framing; the decision is unchanged.
+
 ## Context
 
 VoxelSite instances generate websites that users interact with through the Studio UI. The generated output -- pages, CSS, JS, assets, form handlers -- coexists in the same directory tree as the platform engine (`_studio/`), which contains the AI prompt engine, patch executor, revision manager, file manager, design manager, and all API endpoints.
@@ -17,7 +19,7 @@ The landing page currently promises:
 
 > "Every site is standard HTML, CSS, PHP, and JavaScript. Download it. Move it to any host. No proprietary format. No lock-in, ever."
 
-Meanwhile, operators selling VoxelSite instances have a legitimate concern: if users can download the entire codebase, they can run VoxelSite without a license, resell it, or undercut the operator who provisioned them.
+Meanwhile, operators provisioning VoxelSite instances for clients have a legitimate concern: if users can download the entire codebase, they can stand up their own copy of the full builder and bypass the operator who provisioned them.
 
 The question: where is the boundary between "your content" and "our platform"?
 
@@ -55,7 +57,7 @@ The boundary is drawn between "can render and serve your site" and "can build an
 
 1. **The marketing promise is about the output, not the tool.** "Your files, your rules" means the pages, styles, and assets you created are standard web technologies you can host anywhere. It does not mean you get a copy of the authoring tool. This is consistent with how every other builder works -- Figma lets you export your designs, not Figma itself.
 
-2. **The engine is the licensed product.** VoxelSite is sold on CodeCanyon. VoxelSwarm operators deploy it under their license. If the export included `_studio/`, every end user who downloads their site gets a fully functional VoxelSite installation for free. The operator's business model collapses.
+2. **The export is the output, not the builder.** Including `_studio/` would hand every end user a fully functional copy of the builder, not just their site. The boundary keeps the builder with the operator who runs it and gives end users a portable, self-contained site, the same code-access reasoning as point 1.
 
 3. **The export is self-contained by design.** The standalone form handler ([`submit-standalone.php`](../../template/voxelsite/v1.28.0/_studio/static/submit-standalone.php)) exists specifically so exported sites don't need the Studio's database or vendor directory. Forms keep working after export. This is a deliberate investment in making the export actually portable, not a stripped-down version that breaks.
 
@@ -74,14 +76,14 @@ This is worth being honest about, both in marketing and in documentation. The ex
 Include `_studio/`, `_data/`, `vendor/`, `i18n/` -- the complete installation. User gets a working VoxelSite they can host independently.
 
 - **Upside:** Maximum portability. No ambiguity about what "your files" means.
-- **Downside:** Destroys the licensing model. Every export is a free copy of VoxelSite. Operators have zero reason to pay for VoxelSwarm if their users can just leave with the full product.
-- **Verdict:** Incompatible with the commercial model. Would require switching to a pure SaaS / subscription-only model where the software is never distributed.
+- **Downside:** Every export is a full copy of the builder. End users could leave with the entire platform, removing the code-access boundary the operator provisions behind.
+- **Verdict:** Removes the operator's code-access boundary entirely. Would only fit a hosted-only model where the software is never distributed.
 
 ### B: Content-only export with no PHP (current HTML mode)
 
 Static HTML only. No PHP, no form handler, no dynamic behavior. Pure files.
 
-- **Upside:** Zero license risk. Nothing executable is distributed.
+- **Upside:** Nothing executable is distributed, so there is no code-access concern at all.
 - **Downside:** Sites with forms, dynamic content, or server-side logic stop working. The "no lock-in" promise rings hollow if the export is functionally degraded.
 - **Verdict:** Too restrictive. Already offered as an option (`format: html`), but shouldn't be the only option.
 
@@ -95,13 +97,13 @@ This is what's implemented. Working PHP site with forms, minus the builder.
 
 ## What would change the decision
 
-- **A subscription-only model** where VoxelSite is never distributed as a ZIP (pure hosted SaaS). Full exports would be safe because there's no license file to protect.
-- **An open-source VoxelSite core** with a paid Studio/AI layer. The export could include the rendering engine if the AI editing was the paid gate.
-- **Significant user demand** for self-hosted editing after export, backed by willingness to pay for a standalone license. This would be a licensing change, not an architecture change.
+- **A hosted-only model** where VoxelSite is never distributed as a ZIP (pure SaaS). Full exports would be moot, since nothing is self-hosted to begin with.
+- **An open-core split** that separates the rendering engine from the AI editing layer. The export could then include the rendering engine and keep only the editing layer with the operator.
+- **Significant user demand** for self-hosted editing after export, backed by a clear maintenance model. This would be a distribution change, not an architecture change.
 
 ## Related reading
 
 - [Export endpoint](../../template/voxelsite/v1.28.0/_studio/api/endpoints/export.php) -- the implementation
 - [Standalone form handler](../../template/voxelsite/v1.28.0/_studio/static/submit-standalone.php) -- self-contained submission handler for exported sites
 - [Landing page portability claim](../../views/landing.php) (line 631)
-- [ADR-0001](0001-cpanel-subdomain-vs-full-account.md) -- related license protection reasoning
+- [ADR-0001](0001-cpanel-subdomain-vs-full-account.md) -- related code-access reasoning
